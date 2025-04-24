@@ -4,10 +4,12 @@ import numpy as np
 np.random.seed(42)
 
 def tanh(x):
-    return np.tanh(x)
+    # return np.tanh(x)
+    return 1/2 * np.tanh(x) + 1/2
 
 def tanh_der(x):
-    return 1 - np.tanh(x) ** 2
+    # return 1 - np.tanh(x) ** 2
+    return 1/2 * (1 - np.tanh(x) ** 2)
 
 def loss_func(y_pred, y_true):
     return 0.5 * (y_pred - y_true) ** 2
@@ -37,16 +39,30 @@ def get_samples(n_s):
         img[y_idx, x_idx] = 1.0  # y is the row, x is the column
         return img
 
-    image_X = draw_X()
-    image_O = draw_O()
-    flat_X = image_X.flatten()
-    flat_O = image_O.flatten()
+    def add_noise(img, scale=0.1):
+        noise = np.random.normal(0, scale, img.shape)
+        noisy = img + noise
+        return np.clip(noisy, 0.0, 1.0)            
+    
+    def shift_image(img, dx=2, dy=2):
+        shifted = np.roll(img, shift=(np.random.randint(-dy, dy + 1),
+                                      np.random.randint(-dx, dx + 1)), axis=(0, 1))
+        return shifted
+
     X_data = []
     Y_data = []
     for _ in range(n_s // 2):
+        image_X = draw_X()
+        image_X = shift_image(image_X)
+        image_X = add_noise(image_X)
+        flat_X = image_X.flatten()
         X_data.append(flat_X)
         Y_data.append(0)
     for _ in range(n_s // 2):
+        image_O = draw_O()
+        image_O = shift_image(image_O)
+        image_O = add_noise(image_O)
+        flat_O = image_O.flatten()
         X_data.append(flat_O)
         Y_data.append(1)    
     X = np.array(X_data) # shape: (1000, 784)
@@ -100,7 +116,7 @@ n_s = 1000
 n_f = 784
 n_n = 16
 
-epoch_count = 1000
+epoch_count = 10000
 learn_rate = 0.1
 X, Y = get_samples(n_s)
 hW, hB, oW, oB = init_network(n_s, n_f, n_n)
@@ -144,6 +160,28 @@ else:
 
 print("Analyzing O")
 input_vector = load_image_as_input_vector("c:\\temp\\o.bmp")
+_, hA = forward_one_layer(input_vector, hW, hB)
+_, oA = forward_one_layer(hA, oW, oB)
+prediction = oA[0][0]
+print(prediction)
+if prediction > 0.5:
+    print("Predicted: O")
+else:
+    print("Predicted: X")
+
+print("Analyzing X handwriting")
+input_vector = load_image_as_input_vector("c:\\temp\\x1.bmp")
+_, hA = forward_one_layer(input_vector, hW, hB)
+_, oA = forward_one_layer(hA, oW, oB)
+prediction = oA[0][0]
+print(prediction)
+if prediction > 0.5:
+    print("Predicted: O")
+else:
+    print("Predicted: X")
+
+print("Analyzing O handwriting")
+input_vector = load_image_as_input_vector("c:\\temp\\o1.bmp")
 _, hA = forward_one_layer(input_vector, hW, hB)
 _, oA = forward_one_layer(hA, oW, oB)
 prediction = oA[0][0]
