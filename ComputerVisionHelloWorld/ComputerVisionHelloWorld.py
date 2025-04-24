@@ -1,3 +1,4 @@
+import gzip
 from PIL import Image, ImageOps
 import numpy as np
 
@@ -16,6 +17,55 @@ def loss_func(y_pred, y_true):
 
 def loss_der(y_pred, y_true):
     return y_pred - y_true
+
+def load_emnist_letters_xo(images_path, labels_path, max_samples=None):
+    # Load labels
+    with gzip.open(labels_path, 'rb') as lbpath:
+        _ = int.from_bytes(lbpath.read(4), 'big')  # magic number
+        num_labels = int.from_bytes(lbpath.read(4), 'big')
+        labels = np.frombuffer(lbpath.read(), dtype=np.uint8)
+
+    # Load images
+    with gzip.open(images_path, 'rb') as imgpath:
+        _ = int.from_bytes(imgpath.read(4), 'big')  # magic number
+        num_images = int.from_bytes(imgpath.read(4), 'big')
+        rows = int.from_bytes(imgpath.read(4), 'big')
+        cols = int.from_bytes(imgpath.read(4), 'big')
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8).reshape(num_images, rows, cols)
+
+    # Normalize images to [0, 1]
+    images = images.astype(np.float32) / 255.0
+
+    # EMNIST-letters labels are 1-indexed: 1='a', ..., 26='z'
+    # We want 'o' = 15 and 'x' = 24
+    mask_x = labels == 24  # 'x'
+    mask_o = labels == 15  # 'o'
+
+    x_images = images[mask_x]
+    o_images = images[mask_o]
+
+    x_labels = np.zeros((x_images.shape[0], 1))  # 0 = x
+    o_labels = np.ones((o_images.shape[0], 1))   # 1 = o
+
+    # Combine and shuffle
+    combined_images = np.concatenate((x_images, o_images), axis=0)
+    combined_labels = np.concatenate((x_labels, o_labels), axis=0)
+
+    if max_samples:
+        combined_images = combined_images[:max_samples]
+        combined_labels = combined_labels[:max_samples]
+
+    indices = np.arange(combined_images.shape[0])
+    np.random.shuffle(indices)
+
+    combined_images = combined_images[indices]
+    combined_labels = combined_labels[indices]
+
+    # Flatten images for use in feedforward net
+    X = combined_images.reshape(combined_images.shape[0], -1)
+    Y = combined_labels
+
+    return X, Y
 
 def get_samples(n_s):
     def draw_X():
@@ -116,9 +166,16 @@ n_s = 1000
 n_f = 784
 n_n = 16
 
-epoch_count = 10000
+epoch_count = 100_000
 learn_rate = 0.1
-X, Y = get_samples(n_s)
+X_synth, Y_synth = get_samples(n_s)
+X_emnist, Y_emnist = load_emnist_letters_xo("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", 1000)
+X_combined = np.concatenate((X_emnist, X_synth), axis=0)
+Y_combined = np.concatenate((Y_emnist, Y_synth), axis=0)
+indices = np.arange(X_combined.shape[0])
+np.random.shuffle(indices)
+X = X_combined[indices]
+Y = Y_combined[indices]
 hW, hB, oW, oB = init_network(n_s, n_f, n_n)
 for epoch in range(epoch_count):
     loss = 0    
@@ -141,52 +198,27 @@ for epoch in range(epoch_count):
         print(f"epoch {epoch} | total loss: {loss: .4f}")
 
 # for i in range(X.shape[0]):
-i = 0
-print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
-i = 500
-print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
+# i = 0
+# print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
+# i = 500
+# print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
 
+def check_result(input_vector, expected):        
+    _, hA = forward_one_layer(input_vector, hW, hB)
+    _, oA = forward_one_layer(hA, oW, oB)
+    prediction = oA[0][0]
+    actual = "O" if prediction > 0.5 else "X"
+    print(prediction)
+    print(f"Expected {expected}, Actual {actual}")    
 
-print("Analyzing X")
 input_vector = load_image_as_input_vector("c:\\temp\\x.bmp")
-_, hA = forward_one_layer(input_vector, hW, hB)
-_, oA = forward_one_layer(hA, oW, oB)
-prediction = oA[0][0]
-print(prediction)
-if prediction > 0.5:
-    print("Predicted: O")
-else:
-    print("Predicted: X")
+check_result(input_vector, "X")
 
-print("Analyzing O")
 input_vector = load_image_as_input_vector("c:\\temp\\o.bmp")
-_, hA = forward_one_layer(input_vector, hW, hB)
-_, oA = forward_one_layer(hA, oW, oB)
-prediction = oA[0][0]
-print(prediction)
-if prediction > 0.5:
-    print("Predicted: O")
-else:
-    print("Predicted: X")
+check_result(input_vector, "O")
 
-print("Analyzing X handwriting")
 input_vector = load_image_as_input_vector("c:\\temp\\x1.bmp")
-_, hA = forward_one_layer(input_vector, hW, hB)
-_, oA = forward_one_layer(hA, oW, oB)
-prediction = oA[0][0]
-print(prediction)
-if prediction > 0.5:
-    print("Predicted: O")
-else:
-    print("Predicted: X")
+check_result(input_vector, "X")
 
-print("Analyzing O handwriting")
 input_vector = load_image_as_input_vector("c:\\temp\\o1.bmp")
-_, hA = forward_one_layer(input_vector, hW, hB)
-_, oA = forward_one_layer(hA, oW, oB)
-prediction = oA[0][0]
-print(prediction)
-if prediction > 0.5:
-    print("Predicted: O")
-else:
-    print("Predicted: X")
+check_result(input_vector, "O")
