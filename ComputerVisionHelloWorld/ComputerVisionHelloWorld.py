@@ -1,3 +1,8 @@
+# "Original", total loss after 1000 epochs:
+# .0226637144
+
+# After replacing hidden layer activation with tanh and output layer activation with sigmoid
+# .0201235843
 import gzip
 from PIL import Image, ImageOps
 import numpy as np
@@ -5,12 +10,18 @@ import numpy as np
 np.random.seed(42)
 
 def tanh(x):
-    # return np.tanh(x)
-    return 1/2 * np.tanh(x) + 1/2
+    return np.tanh(x)
+    # return 1/2 * np.tanh(x) + 1/2
 
 def tanh_der(x):
-    # return 1 - np.tanh(x) ** 2
-    return 1/2 * (1 - np.tanh(x) ** 2)
+    return 1 - np.tanh(x) ** 2
+    #return 1/2 * (1 - np.tanh(x) ** 2)
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_der(x):
+    return sigmoid(x) * (1 - sigmoid(x))
 
 def loss_func(y_pred, y_true):
     return 0.5 * (y_pred - y_true) ** 2
@@ -136,9 +147,9 @@ def init_network(n_s, n_f, n_n):
     # o1 is the sole neuron in the output layer.  It receives a 2d input, and so has two weights and one scalar bias
     oW = np.random.randn(1, n_n)
     oB = np.zeros((1, 1))
-    return hW, hB, oW, oB
+    return hW, hB, oW, oB, tanh, tanh_der, sigmoid, sigmoid_der
 
-def forward_one_layer(X, W, b):
+def forward_one_layer(X, W, b, activation):
     # n_s number of samples
     # n_f number of features
     # n_n number of neurons
@@ -149,13 +160,13 @@ def forward_one_layer(X, W, b):
     # WT: n_f * n_n rows of weights per feature, colunmns of neurons
     Z = X @ WT + b;
     # Z: rows of outputs per input, columns of neurons?
-    A = tanh(Z)
+    A = activation(Z)
     # A: activations of Z computer element-wise
     return Z, A
 
-def backward_one_layer(dL_dA, Z, A_prev):
+def backward_one_layer(dL_dA, Z, A_prev, activation_der):
     # dA_dZ element-wise activation function derivative
-    dA_dZ = tanh_der(Z) 
+    dA_dZ = activation_der(Z) 
     # dL_dZ element-wise multiplication
     dL_dZ = dL_dA * dA_dZ
     grad_W = dL_dZ.T @ A_prev / A_prev.shape[0]
@@ -166,36 +177,36 @@ n_s = 1000
 n_f = 784
 n_n = 16
 
-epoch_count = 100_000
+epoch_count = 1000
 learn_rate = 0.1
 X_synth, Y_synth = get_samples(n_s)
-X_emnist, Y_emnist = load_emnist_letters_xo("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", 1000)
+X_emnist, Y_emnist = load_emnist_letters_xo("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 X_combined = np.concatenate((X_emnist, X_synth), axis=0)
 Y_combined = np.concatenate((Y_emnist, Y_synth), axis=0)
 indices = np.arange(X_combined.shape[0])
 np.random.shuffle(indices)
 X = X_combined[indices]
 Y = Y_combined[indices]
-hW, hB, oW, oB = init_network(n_s, n_f, n_n)
-for epoch in range(epoch_count):
-    loss = 0    
-    hZ, hA = forward_one_layer(X, hW, hB)
-    oZ, oA = forward_one_layer(hA, oW, oB)
+hW, hB, oW, oB, hActivation, hActivation_der, oActivation, oActivation_der = init_network(n_s, n_f, n_n)
+for epoch in range(epoch_count):    
+    hZ, hA = forward_one_layer(X, hW, hB, hActivation)
+    oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
 
     # output layer gradient
     dL_doA = loss_der(oA, Y)
-    dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA)
+    dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
     # hidden layer gradient
     dL_dhA =  dL_doZ @ oW
-    dL_dhZ, grad_hW, grad_hB = backward_one_layer(dL_dhA, hZ, X)    
+    dL_dhZ, grad_hW, grad_hB = backward_one_layer(dL_dhA, hZ, X, hActivation_der)
 
     oW -= learn_rate * grad_oW
     oB -= learn_rate * grad_oB
     hW -= learn_rate * grad_hW
     hB -= learn_rate * grad_hB
 
-    if epoch % 200 == 0:        
-        print(f"epoch {epoch} | total loss: {loss: .4f}")
+    if epoch == epoch_count - 1:        
+        loss = loss_func(oA, Y)
+        print(f"epoch {epoch} | total loss: {np.mean(loss):.10f}")
 
 # for i in range(X.shape[0]):
 # i = 0
@@ -204,21 +215,59 @@ for epoch in range(epoch_count):
 # print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
 
 def check_result(input_vector, expected):        
-    _, hA = forward_one_layer(input_vector, hW, hB)
-    _, oA = forward_one_layer(hA, oW, oB)
+    _, hA = forward_one_layer(input_vector, hW, hB, hActivation)
+    _, oA = forward_one_layer(hA, oW, oB, oActivation)
     prediction = oA[0][0]
     actual = "O" if prediction > 0.5 else "X"
     print(prediction)
     print(f"Expected {expected}, Actual {actual}")    
 
+print()
+print("x")
 input_vector = load_image_as_input_vector("c:\\temp\\x.bmp")
 check_result(input_vector, "X")
 
+print()
+print("o")
 input_vector = load_image_as_input_vector("c:\\temp\\o.bmp")
 check_result(input_vector, "O")
 
+print()
+print("x1")
 input_vector = load_image_as_input_vector("c:\\temp\\x1.bmp")
 check_result(input_vector, "X")
 
+print()
+print("o1")
 input_vector = load_image_as_input_vector("c:\\temp\\o1.bmp")
+check_result(input_vector, "O")
+
+print()
+print("x2")
+input_vector = load_image_as_input_vector("c:\\temp\\x2.bmp")
+check_result(input_vector, "X")
+
+print()
+print("o2")
+input_vector = load_image_as_input_vector("c:\\temp\\o2.bmp")
+check_result(input_vector, "O")
+
+print()
+print("x3")
+input_vector = load_image_as_input_vector("c:\\temp\\x3.bmp")
+check_result(input_vector, "X")
+
+print()
+print("o3")
+input_vector = load_image_as_input_vector("c:\\temp\\o3.bmp")
+check_result(input_vector, "O")
+
+print()
+print("x4")
+input_vector = load_image_as_input_vector("c:\\temp\\x4.bmp")
+check_result(input_vector, "X")
+
+print()
+print("o4")
+input_vector = load_image_as_input_vector("c:\\temp\\o4.bmp")
 check_result(input_vector, "O")
