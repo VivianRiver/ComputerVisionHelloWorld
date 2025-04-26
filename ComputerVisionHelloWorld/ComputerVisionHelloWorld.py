@@ -5,7 +5,11 @@
 # MSE = .0201235843
 
 # After replacing MSE loss function with BCE loss function in training
-# MSE .0547804143
+# MSE = .0069460356
+
+# With Xavier initialization,
+# MSE = .0018702731 
+
 import gzip
 from PIL import Image, ImageOps
 import numpy as np
@@ -148,11 +152,13 @@ def load_image_as_input_vector(path):
 def init_network(n_s, n_f, n_n):    
     # initialize weights and biases
     # hW holds the weights of the two neurons in the hidden layer.  They receive a 2d input, and so have two weights and one scalar bias each
-    hW = np.random.randn(n_n, n_f)
+    hLimit = np.sqrt(2 / (n_f + n_n))
+    hW = np.random.randn(n_n, n_f) * hLimit
     hB = np.zeros((1, n_n))
     # hW holds the weights of the one neuron in the output layer.  It receive a 2d input, and so have two weights and one scalar bias
     # o1 is the sole neuron in the output layer.  It receives a 2d input, and so has two weights and one scalar bias
-    oW = np.random.randn(1, n_n)
+    oLimit = np.sqrt(2 / (1 + n_n))
+    oW = np.random.randn(1, n_n) * oLimit
     oB = np.zeros((1, 1))
     return hW, hB, oW, oB, tanh, tanh_der, sigmoid, sigmoid_der, bce, bce_der
 
