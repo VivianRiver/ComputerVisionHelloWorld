@@ -1,8 +1,11 @@
-# "Original", total loss after 1000 epochs:
-# .0226637144
+# "Original", total MSE after 1000 epochs:
+# MSE =  .0069460356
 
 # After replacing hidden layer activation with tanh and output layer activation with sigmoid
-# .0201235843
+# MSE = .0201235843
+
+# After replacing MSE loss function with BCE loss function in training
+# MSE .0547804143
 import gzip
 from PIL import Image, ImageOps
 import numpy as np
@@ -10,12 +13,10 @@ import numpy as np
 np.random.seed(42)
 
 def tanh(x):
-    return np.tanh(x)
-    # return 1/2 * np.tanh(x) + 1/2
+        return np.tanh(x)        
 
 def tanh_der(x):
-    return 1 - np.tanh(x) ** 2
-    #return 1/2 * (1 - np.tanh(x) ** 2)
+    return 1 - np.tanh(x) ** 2        
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -23,11 +24,17 @@ def sigmoid(x):
 def sigmoid_der(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
-def loss_func(y_pred, y_true):
+def mse(y_pred, y_true):
     return 0.5 * (y_pred - y_true) ** 2
 
-def loss_der(y_pred, y_true):
+def mse_der(y_pred, y_true):
     return y_pred - y_true
+
+def bce(y_pred, y_true):
+    return -(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+def bce_der(y_pred, y_true):
+    return (y_pred - y_true) / y_pred / (1 - y_pred)
 
 def load_emnist_letters_xo(images_path, labels_path, max_samples=None):
     # Load labels
@@ -138,7 +145,7 @@ def load_image_as_input_vector(path):
     array = img_array.flatten().reshape(1, -1)
     return array
 
-def init_network(n_s, n_f, n_n):
+def init_network(n_s, n_f, n_n):    
     # initialize weights and biases
     # hW holds the weights of the two neurons in the hidden layer.  They receive a 2d input, and so have two weights and one scalar bias each
     hW = np.random.randn(n_n, n_f)
@@ -147,7 +154,7 @@ def init_network(n_s, n_f, n_n):
     # o1 is the sole neuron in the output layer.  It receives a 2d input, and so has two weights and one scalar bias
     oW = np.random.randn(1, n_n)
     oB = np.zeros((1, 1))
-    return hW, hB, oW, oB, tanh, tanh_der, sigmoid, sigmoid_der
+    return hW, hB, oW, oB, tanh, tanh_der, sigmoid, sigmoid_der, bce, bce_der
 
 def forward_one_layer(X, W, b, activation):
     # n_s number of samples
@@ -187,7 +194,7 @@ indices = np.arange(X_combined.shape[0])
 np.random.shuffle(indices)
 X = X_combined[indices]
 Y = Y_combined[indices]
-hW, hB, oW, oB, hActivation, hActivation_der, oActivation, oActivation_der = init_network(n_s, n_f, n_n)
+hW, hB, oW, oB, hActivation, hActivation_der, oActivation, oActivation_der, loss_func, loss_der = init_network(n_s, n_f, n_n)
 for epoch in range(epoch_count):    
     hZ, hA = forward_one_layer(X, hW, hB, hActivation)
     oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
@@ -204,9 +211,11 @@ for epoch in range(epoch_count):
     hW -= learn_rate * grad_hW
     hB -= learn_rate * grad_hB
 
-    if epoch == epoch_count - 1:        
-        loss = loss_func(oA, Y)
-        print(f"epoch {epoch} | total loss: {np.mean(loss):.10f}")
+    # if epoch == epoch_count - 1:                 
+    if epoch % 100 == 0 or epoch == epoch_count -1:
+        mse_loss = mse(oA, Y)
+        print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")
+
 
 # for i in range(X.shape[0]):
 # i = 0
