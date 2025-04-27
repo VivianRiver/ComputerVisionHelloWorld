@@ -10,6 +10,9 @@
 # With Xavier initialization,
 # MSE = .0018702731 
 
+# With batch size of 64,
+# MSE = .0000004627
+
 import gzip
 from PIL import Image, ImageOps
 import numpy as np
@@ -137,9 +140,15 @@ def get_samples(n_s):
         flat_O = image_O.flatten()
         X_data.append(flat_O)
         Y_data.append(1)    
-    X = np.array(X_data) # shape: (1000, 784)
+    X = np.array(X_data) # shape: (1000, 784)    
     Y = np.array(Y_data).reshape(-1, 1) # shape: (1000, 1)
     return X, Y            
+
+def batch_samples(X, Y, batch_size):
+    n_batches = np.ceil( Y.size / batch_size)    
+    X_batches = np.array_split(X, n_batches)
+    Y_batches = np.array_split(Y, n_batches)
+    return X_batches, Y_batches
 
 def load_image_as_input_vector(path):
     img = Image.open(path).convert("L")
@@ -190,6 +199,7 @@ n_s = 1000
 n_f = 784
 n_n = 16
 
+batch_size = 64
 epoch_count = 1000
 learn_rate = 0.1
 X_synth, Y_synth = get_samples(n_s)
@@ -200,34 +210,31 @@ indices = np.arange(X_combined.shape[0])
 np.random.shuffle(indices)
 X = X_combined[indices]
 Y = Y_combined[indices]
+X_batches, Y_batches = batch_samples(X, Y, batch_size)
+
 hW, hB, oW, oB, hActivation, hActivation_der, oActivation, oActivation_der, loss_func, loss_der = init_network(n_s, n_f, n_n)
 for epoch in range(epoch_count):    
-    hZ, hA = forward_one_layer(X, hW, hB, hActivation)
-    oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
+    for X_batch, Y_batch in zip(X_batches, Y_batches):
+        hZ, hA = forward_one_layer(X_batch, hW, hB, hActivation)
+        oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
 
-    # output layer gradient
-    dL_doA = loss_der(oA, Y)
-    dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
-    # hidden layer gradient
-    dL_dhA =  dL_doZ @ oW
-    dL_dhZ, grad_hW, grad_hB = backward_one_layer(dL_dhA, hZ, X, hActivation_der)
+        # output layer gradient
+        dL_doA = loss_der(oA, Y_batch)
+        dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
+        # hidden layer gradient
+        dL_dhA =  dL_doZ @ oW
+        dL_dhZ, grad_hW, grad_hB = backward_one_layer(dL_dhA, hZ, X_batch, hActivation_der)
 
-    oW -= learn_rate * grad_oW
-    oB -= learn_rate * grad_oB
-    hW -= learn_rate * grad_hW
-    hB -= learn_rate * grad_hB
-
-    # if epoch == epoch_count - 1:                 
+        oW -= learn_rate * grad_oW
+        oB -= learn_rate * grad_oB
+        hW -= learn_rate * grad_hW
+        hB -= learn_rate * grad_hB
+    
     if epoch % 100 == 0 or epoch == epoch_count -1:
+        hZ, hA = forward_one_layer(X, hW, hB, hActivation)
+        oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
         mse_loss = mse(oA, Y)
-        print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")
-
-
-# for i in range(X.shape[0]):
-# i = 0
-# print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
-# i = 500
-# print(f"Input: {X[i]} | Expected: {Y[i][0]} | Actual: {oA[i][0]:.3f}")    
+        print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")  
 
 def check_result(input_vector, expected):        
     _, hA = forward_one_layer(input_vector, hW, hB, hActivation)
