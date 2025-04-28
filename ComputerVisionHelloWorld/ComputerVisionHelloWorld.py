@@ -162,35 +162,63 @@ def init_network(n_s, n_f, n_h1n, n_h2n, n_on):
     # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
     return h1W, h1B, h2W, h2B, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
 
-def forward_one_layer(X, W, b, activation):
-    # n_s number of samples
-    # n_f number of features
-    # n_n number of neurons
-    # X: n_s * n_f rows of inputs, columns of features
-    # W: n_n * n_f rows of neuron, columns of weights per feature
-    # b: n_n * 1 columns vector of biases
-    WT = W.T
-    # WT: n_f * n_n rows of weights per feature, colunmns of neurons
-    Z = X @ WT + b;
-    # Z: rows of outputs per input, columns of neurons?
-    A = activation(Z)
-    # A: activations of Z computer element-wise
-    return Z, A
-
-def backward_one_layer(dL_dA, Z, A_prev, activation_der):
-    # dA_dZ element-wise activation function derivative
-    dA_dZ = activation_der(Z) 
-    # dL_dZ element-wise multiplication
-    dL_dZ = dL_dA * dA_dZ
-    grad_W = dL_dZ.T @ A_prev / A_prev.shape[0]
-    grad_B = np.mean(dL_dZ, axis=0, keepdims=True)
-    return dL_dZ, grad_W, grad_B                 
-
 def forward_pass(X, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation):
+    def forward_one_layer(X, W, b, activation):
+        # n_s number of samples
+        # n_f number of features
+        # n_n number of neurons
+        # X: n_s * n_f rows of inputs, columns of features
+        # W: n_n * n_f rows of neuron, columns of weights per feature
+        # b: n_n * 1 columns vector of biases
+        WT = W.T
+        # WT: n_f * n_n rows of weights per feature, colunmns of neurons
+        Z = X @ WT + b;
+        # Z: rows of outputs per input, columns of neurons?
+        A = activation(Z)
+        # A: activations of Z computer element-wise
+        return Z, A
+
     h1Z, h1A = forward_one_layer(X, h1W, h1B, hActivation) #h Activation is tanh for now
     h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation) #h Activation is tanh for now
     oZ, oA = forward_one_layer(h2A, oW, oB, oActivation) # oActivation is softmax for now
     return h1Z, h1A, h2Z, h2A, oZ, oA
+
+def backward_pass(X, Y, h1W, h1B, h1A, h1Z, h2W, h2B, h2A, h2Z, oW, oB, oA, oZ, hActivation_der):
+    def backward_one_layer(dL_dA, Z, A_prev, activation_der):
+        # dA_dZ element-wise activation function derivative
+        dA_dZ = activation_der(Z) 
+        # dL_dZ element-wise multiplication
+        dL_dZ = dL_dA * dA_dZ
+        grad_W = dL_dZ.T @ A_prev / A_prev.shape[0]
+        grad_B = np.mean(dL_dZ, axis=0, keepdims=True)
+        return dL_dZ, grad_W, grad_B                 
+
+    # Output layer gradient (simple now!)
+    dL_doZ = oA - Y  # predicted probabilities minus true one-hot labels
+    grad_oW = dL_doZ.T @ h2A / X.shape[0]
+    grad_oB = np.mean(dL_doZ, axis=0, keepdims=True)
+
+    # # output layer gradient
+    # dL_doA = loss_der(oA, Y_batch)
+    # dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
+        
+    # hidden layer gradient
+    dL_dh2A =  dL_doZ @ oW
+    dL_dh2Z, grad_h2W, grad_h2B = backward_one_layer(dL_dh2A, h2Z, h1A, hActivation_der)
+
+    dL_dh1A = dL_dh2A @ h2W
+    dL_dh1Z, grad_h1W, grad_h1B = backward_one_layer(dL_dh1A, h1Z, X, hActivation_der)
+
+    return grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB
+
+def get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB):
+    oW -= learn_rate * grad_oW
+    oB -= learn_rate * grad_oB
+    h2W -= learn_rate * grad_h2W
+    h2B -= learn_rate * grad_h2B
+    h1W -= learn_rate * grad_h1W
+    h1B -= learn_rate * grad_h1B
+    return h1W, h1B, h2W, h2B, oW, oB
 
 n_s = 1000
 n_f = 784
@@ -222,34 +250,11 @@ h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func
 for epoch in range(epoch_count):    
     for X_batch, Y_batch in zip(X_batches, Y_batches):
         h1Z, h1A, h2Z, h2A, oZ, oA = forward_pass(X_batch, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
-
-        # Output layer gradient (simple now!)
-        dL_doZ = oA - Y_batch  # predicted probabilities minus true one-hot labels
-        grad_oW = dL_doZ.T @ h2A / X_batch.shape[0]
-        grad_oB = np.mean(dL_doZ, axis=0, keepdims=True)
-
-        # # output layer gradient
-        # dL_doA = loss_der(oA, Y_batch)
-        # dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
-        
-        # hidden layer gradient
-        dL_dh2A =  dL_doZ @ oW
-        dL_dh2Z, grad_h2W, grad_h2B = backward_one_layer(dL_dh2A, h2Z, h1A, hActivation_der)
-
-        dL_dh1A = dL_dh2A @ h2W
-        dL_dh1Z, grad_h1W, grad_h1B = backward_one_layer(dL_dh1A, h1Z, X_batch, hActivation_der)
-
-        oW -= learn_rate * grad_oW
-        oB -= learn_rate * grad_oB
-        h2W -= learn_rate * grad_h2W
-        h2B -= learn_rate * grad_h2B
-        h1W -= learn_rate * grad_h1W
-        h1B -= learn_rate * grad_h1B
+        grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB = backward_pass(X_batch, Y_batch, h1W, h1B, h1A, h1Z, h2W, h2B, h2A, h2Z, oW, oB, oA, oZ, hActivation_der)        
+        h1W, h1B, h2W, h2B, oW, oB = get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB)
     
     if epoch % 100 == 0 or epoch == epoch_count -1:
-        h1Z, h1A = forward_one_layer(X, h1W, h1B, hActivation)
-        h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation)
-        oZ, oA = forward_one_layer(h2A, oW, oB, oActivation)
+        _, _, _, _, _, oA = forward_pass(X, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
         mse_loss = mse(oA, Y)
         print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")  
         loss = loss_func(oA, Y)
@@ -261,8 +266,6 @@ def check_result(input_vector, expected):
     prediction = rounded = (oA >= 0.5).astype(int)    
     print(prediction)
     # print(f"Expected {expected}, Actual {actual}")    
-
-
 
 for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
     print()
