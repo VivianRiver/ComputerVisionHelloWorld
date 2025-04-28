@@ -186,6 +186,12 @@ def backward_one_layer(dL_dA, Z, A_prev, activation_der):
     grad_B = np.mean(dL_dZ, axis=0, keepdims=True)
     return dL_dZ, grad_W, grad_B                 
 
+def forward_pass(X, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation):
+    h1Z, h1A = forward_one_layer(X, h1W, h1B, hActivation) #h Activation is tanh for now
+    h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation) #h Activation is tanh for now
+    oZ, oA = forward_one_layer(h2A, oW, oB, oActivation) # oActivation is softmax for now
+    return h1Z, h1A, h2Z, h2A, oZ, oA
+
 n_s = 1000
 n_f = 784
 n_h1n = 32
@@ -215,9 +221,7 @@ print(x_count)
 h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func, loss_der = init_network(n_s, n_f, n_h1n, n_h2n, n_on)
 for epoch in range(epoch_count):    
     for X_batch, Y_batch in zip(X_batches, Y_batches):
-        h1Z, h1A = forward_one_layer(X_batch, h1W, h1B, hActivation) #h Activation is tanh for now
-        h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation) #h Activation is tanh for now
-        oZ, oA = forward_one_layer(h2A, oW, oB, oActivation) # oActivation is softmax for now
+        h1Z, h1A, h2Z, h2A, oZ, oA = forward_pass(X_batch, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
 
         # Output layer gradient (simple now!)
         dL_doZ = oA - Y_batch  # predicted probabilities minus true one-hot labels
@@ -252,9 +256,7 @@ for epoch in range(epoch_count):
         print(f"epoch {epoch} | CE: {np.mean(loss):.10f}")  
 
 def check_result(input_vector, expected):        
-    _, h1A = forward_one_layer(input_vector, h1W, h1B, hActivation)
-    _, h2A = forward_one_layer(h1A, h2W, h2B, hActivation)
-    _, oA = forward_one_layer(h2A, oW, oB, oActivation)
+    _, _, _, _, _, oA = forward_pass(input_vector, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)    
     print(oA)
     prediction = rounded = (oA >= 0.5).astype(int)    
     print(prediction)
