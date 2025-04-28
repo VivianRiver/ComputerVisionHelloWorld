@@ -20,16 +20,35 @@ import numpy as np
 np.random.seed(42)
 
 def tanh(x):
-        return np.tanh(x)        
+    return np.tanh(x)        
 
 def tanh_der(x):
     return 1 - np.tanh(x) ** 2        
+
+def relu(x):
+    return np.maximum(0, x)        
+
+def relu_der(x):
+    return (x > 0).astype(float)
+
+def tanh_der(x):
+    return 1 - np.tanh(x) ** 2 
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 def sigmoid_der(x):
     return sigmoid(x) * (1 - sigmoid(x))
+
+def softmax(z):
+    # Step 1: Stablize the inputs by subtracting the max per sample
+    z_stable = z - np.max(z, axis=1, keepdims=True)
+    # Step 2: Exponentiate
+    exp_z = np.exp(z_stable)
+    # Step 3: Normalize by the sum of exponentials
+    softmax_output = exp_z / np.sum(exp_z, axis=1, keepdims=True)
+    return softmax_output
+
 
 def mse(y_pred, y_true):
     return 0.5 * (y_pred - y_true) ** 2
@@ -43,7 +62,17 @@ def bce(y_pred, y_true):
 def bce_der(y_pred, y_true):
     return (y_pred - y_true) / y_pred / (1 - y_pred)
 
-def load_emnist_letters_xo(images_path, labels_path, max_samples=None):
+def cross_entropy_loss(y_pred, y_true):
+    # Clip y_pred to avoid log(0)
+    y_pred = np.clip(y_pred, 1e-9, 1 - 1e-9)
+    # Compute cross-entropy
+    loss = -np.sum(y_true * np.log(y_pred)) / y_true.shape[0]
+    return loss
+
+def cross_entropy_derivative(y_pred, y_true):
+    return y_pred - y_true
+
+def load_emnist_letters_abox(images_path, labels_path, max_samples=None):
     # Load labels
     with gzip.open(labels_path, 'rb') as lbpath:
         _ = int.from_bytes(lbpath.read(4), 'big')  # magic number
@@ -63,18 +92,28 @@ def load_emnist_letters_xo(images_path, labels_path, max_samples=None):
 
     # EMNIST-letters labels are 1-indexed: 1='a', ..., 26='z'
     # We want 'o' = 15 and 'x' = 24
+    # We now expand this to include 'a' = 1 and 'b' = 2
+    mask_a = labels == 1 # 'a'
+    mask_b = labels == 2 # 'b'
     mask_x = labels == 24  # 'x'
     mask_o = labels == 15  # 'o'
 
+    #a_images = np.empty((0, *images.shape[1:]))
+    a_images = images[mask_a]
+    #b_images = np.empty((0, *images.shape[1:]))
+    b_images = images[mask_b]
     x_images = images[mask_x]
     o_images = images[mask_o]
 
-    x_labels = np.zeros((x_images.shape[0], 1))  # 0 = x
-    o_labels = np.ones((o_images.shape[0], 1))   # 1 = o
+# Create one-hot encoded labels
+    a_labels = np.tile(np.array([[1, 0, 0, 0]]), (a_images.shape[0], 1))  # 'a'
+    b_labels = np.tile(np.array([[0, 1, 0, 0]]), (b_images.shape[0], 1))  # 'b'
+    o_labels = np.tile(np.array([[0, 0, 1, 0]]), (o_images.shape[0], 1))  # 'o'
+    x_labels = np.tile(np.array([[0, 0, 0, 1]]), (x_images.shape[0], 1))  # 'x'
 
     # Combine and shuffle
-    combined_images = np.concatenate((x_images, o_images), axis=0)
-    combined_labels = np.concatenate((x_labels, o_labels), axis=0)
+    combined_images = np.concatenate((a_images, b_images, x_images, o_images), axis=0)
+    combined_labels = np.concatenate((a_labels, b_labels, x_labels, o_labels), axis=0)
 
     if max_samples:
         combined_images = combined_images[:max_samples]
@@ -92,58 +131,6 @@ def load_emnist_letters_xo(images_path, labels_path, max_samples=None):
 
     return X, Y
 
-def get_samples(n_s):
-    def draw_X():
-        img = np.zeros((28, 28))
-        # draw an X using diagonal lines
-        for i in range(28):
-            img[i, i] = 1.0
-            img[i, 27 - i] = 1.0
-        return img
-        
-    def draw_O():
-        img = np.zeros((28, 28))
-        # draw an O
-        cx, cy = 13.5, 13.5  # center of the grid (float helps symmetry)
-        r = 10  # reasonable radius (not touching edges)
-        theta = np.linspace(0, 2 * np.pi, 100)
-        x_vals = cx + r * np.cos(theta)
-        y_vals = cy + r * np.sin(theta)
-        x_idx = np.round(x_vals).astype(int)
-        y_idx = np.round(y_vals).astype(int)
-        img[y_idx, x_idx] = 1.0  # y is the row, x is the column
-        return img
-
-    def add_noise(img, scale=0.1):
-        noise = np.random.normal(0, scale, img.shape)
-        noisy = img + noise
-        return np.clip(noisy, 0.0, 1.0)            
-    
-    def shift_image(img, dx=2, dy=2):
-        shifted = np.roll(img, shift=(np.random.randint(-dy, dy + 1),
-                                      np.random.randint(-dx, dx + 1)), axis=(0, 1))
-        return shifted
-
-    X_data = []
-    Y_data = []
-    for _ in range(n_s // 2):
-        image_X = draw_X()
-        image_X = shift_image(image_X)
-        image_X = add_noise(image_X)
-        flat_X = image_X.flatten()
-        X_data.append(flat_X)
-        Y_data.append(0)
-    for _ in range(n_s // 2):
-        image_O = draw_O()
-        image_O = shift_image(image_O)
-        image_O = add_noise(image_O)
-        flat_O = image_O.flatten()
-        X_data.append(flat_O)
-        Y_data.append(1)    
-    X = np.array(X_data) # shape: (1000, 784)    
-    Y = np.array(Y_data).reshape(-1, 1) # shape: (1000, 1)
-    return X, Y            
-
 def batch_samples(X, Y, batch_size):
     n_batches = np.ceil( Y.size / batch_size)    
     X_batches = np.array_split(X, n_batches)
@@ -158,18 +145,22 @@ def load_image_as_input_vector(path):
     array = img_array.flatten().reshape(1, -1)
     return array
 
-def init_network(n_s, n_f, n_n):    
+def init_network(n_s, n_f, n_h1n, n_h2n, n_on):
     # initialize weights and biases
-    # hW holds the weights of the two neurons in the hidden layer.  They receive a 2d input, and so have two weights and one scalar bias each
-    hLimit = np.sqrt(2 / (n_f + n_n))
-    hW = np.random.randn(n_n, n_f) * hLimit
-    hB = np.zeros((1, n_n))
-    # hW holds the weights of the one neuron in the output layer.  It receive a 2d input, and so have two weights and one scalar bias
-    # o1 is the sole neuron in the output layer.  It receives a 2d input, and so has two weights and one scalar bias
-    oLimit = np.sqrt(2 / (1 + n_n))
-    oW = np.random.randn(1, n_n) * oLimit
-    oB = np.zeros((1, 1))
-    return hW, hB, oW, oB, tanh, tanh_der, sigmoid, sigmoid_der, bce, bce_der
+    # h1W holds the weights of the n_hn neurons in the first hidden layer.
+    h1Limit = np.sqrt(6 / (n_f + n_h1n))
+    h1W = np.random.randn(n_h1n, n_f) * h1Limit
+    h1B = np.zeros((1, n_h1n))
+    # h2W holds the weights of the n_hn neurons in the second hidden layer.
+    h2Limit = np.sqrt(6 / (n_f + n_h2n))
+    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    h2B = np.zeros((1, n_h2n))
+    # oW holds the weights of the n_on neuron in the output layer.    
+    oLimit = np.sqrt(6 / (n_on + n_h2n))
+    oW = np.random.randn(n_on, n_h2n) * oLimit
+    oB = np.zeros((1, n_on))
+    # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
+    return h1W, h1B, h2W, h2B, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
 
 def forward_one_layer(X, W, b, activation):
     # n_s number of samples
@@ -197,99 +188,82 @@ def backward_one_layer(dL_dA, Z, A_prev, activation_der):
 
 n_s = 1000
 n_f = 784
-n_n = 16
+n_h1n = 32
+n_h2n = 32
+n_on = 4
 
 batch_size = 64
 epoch_count = 1000
-learn_rate = 0.1
-X_synth, Y_synth = get_samples(n_s)
-X_emnist, Y_emnist = load_emnist_letters_xo("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
-X_combined = np.concatenate((X_emnist, X_synth), axis=0)
-Y_combined = np.concatenate((Y_emnist, Y_synth), axis=0)
-indices = np.arange(X_combined.shape[0])
+learn_rate = 0.05
+X_emnist, Y_emnist = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
+indices = np.arange(X_emnist.shape[0])
 np.random.shuffle(indices)
-X = X_combined[indices]
-Y = Y_combined[indices]
+X = X_emnist[indices]
+Y = Y_emnist[indices]
 X_batches, Y_batches = batch_samples(X, Y, batch_size)
 
-hW, hB, oW, oB, hActivation, hActivation_der, oActivation, oActivation_der, loss_func, loss_der = init_network(n_s, n_f, n_n)
+a_count = Y[Y[:,0] == 1].shape[0]
+b_count = Y[Y[:,1] == 1].shape[0]
+o_count = Y[Y[:,2] == 1].shape[0]
+x_count = Y[Y[:,3] == 1].shape[0]
+
+print(a_count)
+print(b_count)
+print(o_count)
+print(x_count)
+
+h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func, loss_der = init_network(n_s, n_f, n_h1n, n_h2n, n_on)
 for epoch in range(epoch_count):    
     for X_batch, Y_batch in zip(X_batches, Y_batches):
-        hZ, hA = forward_one_layer(X_batch, hW, hB, hActivation)
-        oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
+        h1Z, h1A = forward_one_layer(X_batch, h1W, h1B, hActivation) #h Activation is tanh for now
+        h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation) #h Activation is tanh for now
+        oZ, oA = forward_one_layer(h2A, oW, oB, oActivation) # oActivation is softmax for now
 
-        # output layer gradient
-        dL_doA = loss_der(oA, Y_batch)
-        dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
+        # Output layer gradient (simple now!)
+        dL_doZ = oA - Y_batch  # predicted probabilities minus true one-hot labels
+        grad_oW = dL_doZ.T @ h2A / X_batch.shape[0]
+        grad_oB = np.mean(dL_doZ, axis=0, keepdims=True)
+
+        # # output layer gradient
+        # dL_doA = loss_der(oA, Y_batch)
+        # dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
+        
         # hidden layer gradient
-        dL_dhA =  dL_doZ @ oW
-        dL_dhZ, grad_hW, grad_hB = backward_one_layer(dL_dhA, hZ, X_batch, hActivation_der)
+        dL_dh2A =  dL_doZ @ oW
+        dL_dh2Z, grad_h2W, grad_h2B = backward_one_layer(dL_dh2A, h2Z, h1A, hActivation_der)
+
+        dL_dh1A = dL_dh2A @ h2W
+        dL_dh1Z, grad_h1W, grad_h1B = backward_one_layer(dL_dh1A, h1Z, X_batch, hActivation_der)
 
         oW -= learn_rate * grad_oW
         oB -= learn_rate * grad_oB
-        hW -= learn_rate * grad_hW
-        hB -= learn_rate * grad_hB
+        h2W -= learn_rate * grad_h2W
+        h2B -= learn_rate * grad_h2B
+        h1W -= learn_rate * grad_h1W
+        h1B -= learn_rate * grad_h1B
     
     if epoch % 100 == 0 or epoch == epoch_count -1:
-        hZ, hA = forward_one_layer(X, hW, hB, hActivation)
-        oZ, oA = forward_one_layer(hA, oW, oB, oActivation)
+        h1Z, h1A = forward_one_layer(X, h1W, h1B, hActivation)
+        h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation)
+        oZ, oA = forward_one_layer(h2A, oW, oB, oActivation)
         mse_loss = mse(oA, Y)
         print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")  
+        loss = loss_func(oA, Y)
+        print(f"epoch {epoch} | CE: {np.mean(loss):.10f}")  
 
 def check_result(input_vector, expected):        
-    _, hA = forward_one_layer(input_vector, hW, hB, hActivation)
-    _, oA = forward_one_layer(hA, oW, oB, oActivation)
-    prediction = oA[0][0]
-    actual = "O" if prediction > 0.5 else "X"
+    _, h1A = forward_one_layer(input_vector, h1W, h1B, hActivation)
+    _, h2A = forward_one_layer(h1A, h2W, h2B, hActivation)
+    _, oA = forward_one_layer(h2A, oW, oB, oActivation)
+    print(oA)
+    prediction = rounded = (oA >= 0.5).astype(int)    
     print(prediction)
-    print(f"Expected {expected}, Actual {actual}")    
+    # print(f"Expected {expected}, Actual {actual}")    
 
-print()
-print("x")
-input_vector = load_image_as_input_vector("c:\\temp\\x.bmp")
-check_result(input_vector, "X")
 
-print()
-print("o")
-input_vector = load_image_as_input_vector("c:\\temp\\o.bmp")
-check_result(input_vector, "O")
 
-print()
-print("x1")
-input_vector = load_image_as_input_vector("c:\\temp\\x1.bmp")
-check_result(input_vector, "X")
-
-print()
-print("o1")
-input_vector = load_image_as_input_vector("c:\\temp\\o1.bmp")
-check_result(input_vector, "O")
-
-print()
-print("x2")
-input_vector = load_image_as_input_vector("c:\\temp\\x2.bmp")
-check_result(input_vector, "X")
-
-print()
-print("o2")
-input_vector = load_image_as_input_vector("c:\\temp\\o2.bmp")
-check_result(input_vector, "O")
-
-print()
-print("x3")
-input_vector = load_image_as_input_vector("c:\\temp\\x3.bmp")
-check_result(input_vector, "X")
-
-print()
-print("o3")
-input_vector = load_image_as_input_vector("c:\\temp\\o3.bmp")
-check_result(input_vector, "O")
-
-print()
-print("x4")
-input_vector = load_image_as_input_vector("c:\\temp\\x4.bmp")
-check_result(input_vector, "X")
-
-print()
-print("o4")
-input_vector = load_image_as_input_vector("c:\\temp\\o4.bmp")
-check_result(input_vector, "O")
+for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
+    print()
+    print(x)
+    input_vector = load_image_as_input_vector(f"c:\\temp\\{x}.bmp")
+    check_result(input_vector, "X")
