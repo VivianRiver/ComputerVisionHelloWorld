@@ -145,7 +145,7 @@ def load_image_as_input_vector(path):
     array = img_array.flatten().reshape(1, -1)
     return array
 
-def init_network(n_s, n_f, n_h1n, n_h2n, n_on):
+def init_network(n_f, n_h1n, n_h2n, n_on):
     # initialize weights and biases
     # h1W holds the weights of the n_hn neurons in the first hidden layer.
     h1Limit = np.sqrt(6 / (n_f + n_h1n))
@@ -220,7 +220,6 @@ def get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_
     h1B -= learn_rate * grad_h1B
     return h1W, h1B, h2W, h2B, oW, oB
 
-n_s = 1000
 n_f = 784
 n_h1n = 32
 n_h2n = 32
@@ -246,7 +245,7 @@ print(b_count)
 print(o_count)
 print(x_count)
 
-h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func, loss_der = init_network(n_s, n_f, n_h1n, n_h2n, n_on)
+h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
 for epoch in range(epoch_count):    
     for X_batch, Y_batch in zip(X_batches, Y_batches):
         h1Z, h1A, h2Z, h2A, oZ, oA = forward_pass(X_batch, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
@@ -260,15 +259,30 @@ for epoch in range(epoch_count):
         loss = loss_func(oA, Y)
         print(f"epoch {epoch} | CE: {np.mean(loss):.10f}")  
 
+match_count = 0
+mismatch_count = 0
+total_count = 0
 def check_result(input_vector, expected):        
-    _, _, _, _, _, oA = forward_pass(input_vector, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)    
-    print(oA)
-    prediction = rounded = (oA >= 0.5).astype(int)    
-    print(prediction)
-    # print(f"Expected {expected}, Actual {actual}")    
+    global match_count, mismatch_count, total_count  # <-- add this line
+    _, _, _, _, _, oA = forward_pass(input_vector, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)            
 
-for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
-    print()
-    print(x)
-    input_vector = load_image_as_input_vector(f"c:\\temp\\{x}.bmp")
-    check_result(input_vector, "X")
+    prediction = rounded = (oA >= 0.5).astype(int)        
+    if (np.array_equal(expected.flatten(), prediction.flatten())):
+        match_count += 1
+    else:
+        mismatch_count += 1
+    total_count += 1    
+
+X_test, Y_test = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
+for x, y in zip(X_test, Y_test):
+    check_result(x, y)
+
+print(f"Match: {match_count}")
+print(f"Mismatch: {mismatch_count}")
+print(f"Total: {total_count}")
+
+# for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
+#     print()
+#     print(x)
+#     input_vector = load_image_as_input_vector(f"c:\\temp\\{x}.bmp")
+#     check_result(input_vector, "X")
