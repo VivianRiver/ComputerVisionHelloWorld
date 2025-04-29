@@ -16,6 +16,8 @@
 import gzip
 from PIL import Image, ImageOps
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 np.random.seed(42)
 
@@ -238,7 +240,7 @@ n_h2n = 32
 n_on = 8
 
 batch_size = 64
-epoch_count = 1000
+epoch_count = 100
 learn_rate = 0.05
 X_emnist, Y_emnist = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 indices = np.arange(X_emnist.shape[0])
@@ -282,15 +284,21 @@ for epoch in range(epoch_count):
 match_count = 0
 mismatch_count = 0
 total_count = 0
+mismatches = []
 def check_result(input_vector, expected):        
     global match_count, mismatch_count, total_count  # <-- add this line
     _, _, _, _, _, oA = forward_pass(input_vector, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)            
 
     prediction = rounded = (oA >= 0.5).astype(int)        
     if (np.array_equal(expected.flatten(), prediction.flatten())):
-        match_count += 1
+        match_count += 1        
     else:
         mismatch_count += 1
+        class_names = ["A", "B", "C", "D", "O", "X"]  # Adjust for your classes
+        expected_label = np.argmax(expected)
+        predicted_label = np.argmax(oA)
+        mismatches.append((input_vector, expected_label, predicted_label))
+        
     total_count += 1    
 
 X_test, Y_test = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
@@ -300,6 +308,20 @@ for x, y in zip(X_test, Y_test):
 print(f"Match: {match_count}")
 print(f"Mismatch: {mismatch_count}")
 print(f"Total: {total_count}")
+
+fig, axes = plt.subplots(16, 16, figsize=(10, 10))
+axes = axes.flatten()
+
+class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
+
+for ax, (img, true_label, pred_label) in zip(axes, mismatches):
+    img_corrected = img.reshape(28, 28).T  # ← just this
+    ax.imshow(img_corrected, cmap='gray')
+    ax.axis('off')
+    ax.set_title(f"T: {class_names[true_label]}, P: {class_names[pred_label]}")
+
+plt.tight_layout()
+plt.show()
 
 # for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
 #     print()
