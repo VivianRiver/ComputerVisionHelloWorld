@@ -95,6 +95,8 @@ def load_emnist_letters_abox(images_path, labels_path, max_samples=None):
     # We now expand this to include 'a' = 1 and 'b' = 2
     mask_a = labels == 1 # 'a'
     mask_b = labels == 2 # 'b'
+    mask_c = labels == 3 # 'c'
+    mask_d = labels == 4 # 'd'
     mask_x = labels == 24  # 'x'
     mask_o = labels == 15  # 'o'
 
@@ -102,18 +104,22 @@ def load_emnist_letters_abox(images_path, labels_path, max_samples=None):
     a_images = images[mask_a]
     #b_images = np.empty((0, *images.shape[1:]))
     b_images = images[mask_b]
+    c_images = images[mask_c]
+    d_images = images[mask_d]
     x_images = images[mask_x]
     o_images = images[mask_o]
 
 # Create one-hot encoded labels
-    a_labels = np.tile(np.array([[1, 0, 0, 0]]), (a_images.shape[0], 1))  # 'a'
-    b_labels = np.tile(np.array([[0, 1, 0, 0]]), (b_images.shape[0], 1))  # 'b'
-    o_labels = np.tile(np.array([[0, 0, 1, 0]]), (o_images.shape[0], 1))  # 'o'
-    x_labels = np.tile(np.array([[0, 0, 0, 1]]), (x_images.shape[0], 1))  # 'x'
+    a_labels = np.tile(np.array([[1, 0, 0, 0, 0, 0]]), (a_images.shape[0], 1))  # 'a'
+    b_labels = np.tile(np.array([[0, 1, 0, 0, 0, 0]]), (b_images.shape[0], 1))  # 'b'
+    c_labels = np.tile(np.array([[0, 0, 1, 0, 0, 0]]), (c_images.shape[0], 1))  # 'b'
+    d_labels = np.tile(np.array([[0, 0, 0, 1, 0, 0]]), (d_images.shape[0], 1))  # 'b'
+    o_labels = np.tile(np.array([[0, 0, 0, 0, 1, 0]]), (o_images.shape[0], 1))  # 'o'
+    x_labels = np.tile(np.array([[0, 0, 0, 0, 0, 1]]), (x_images.shape[0], 1))  # 'x'
 
     # Combine and shuffle
-    combined_images = np.concatenate((a_images, b_images, x_images, o_images), axis=0)
-    combined_labels = np.concatenate((a_labels, b_labels, x_labels, o_labels), axis=0)
+    combined_images = np.concatenate((a_images, b_images, c_images, d_images, x_images, o_images), axis=0)
+    combined_labels = np.concatenate((a_labels, b_labels, c_labels, d_labels, x_labels, o_labels), axis=0)
 
     if max_samples:
         combined_images = combined_images[:max_samples]
@@ -223,7 +229,7 @@ def get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_
 n_f = 784
 n_h1n = 32
 n_h2n = 32
-n_on = 4
+n_on = 6
 
 batch_size = 64
 epoch_count = 1000
@@ -237,11 +243,15 @@ X_batches, Y_batches = batch_samples(X, Y, batch_size)
 
 a_count = Y[Y[:,0] == 1].shape[0]
 b_count = Y[Y[:,1] == 1].shape[0]
-o_count = Y[Y[:,2] == 1].shape[0]
-x_count = Y[Y[:,3] == 1].shape[0]
+c_count = Y[Y[:,2] == 1].shape[0]
+d_count = Y[Y[:,3] == 1].shape[0]
+o_count = Y[Y[:,4] == 1].shape[0]
+x_count = Y[Y[:,5] == 1].shape[0]
 
 print(a_count)
 print(b_count)
+print(c_count)
+print(d_count)
 print(o_count)
 print(x_count)
 
