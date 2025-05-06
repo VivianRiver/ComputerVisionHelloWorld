@@ -13,11 +13,13 @@
 # With batch size of 64,
 # MSE = .0000004627
 
-import gzip
+from turtle import backward
 from PIL import Image, ImageOps
 import numpy as np
 import matplotlib.pyplot as plt
 
+import emnist
+import layer
 
 np.random.seed(42)
 
@@ -74,79 +76,8 @@ def cross_entropy_loss(y_pred, y_true):
 def cross_entropy_derivative(y_pred, y_true):
     return y_pred - y_true
 
-def load_emnist_letters_abox(images_path, labels_path, max_samples=None):
-    # Load labels
-    with gzip.open(labels_path, 'rb') as lbpath:
-        _ = int.from_bytes(lbpath.read(4), 'big')  # magic number
-        num_labels = int.from_bytes(lbpath.read(4), 'big')
-        labels = np.frombuffer(lbpath.read(), dtype=np.uint8)
-
-    # Load images
-    with gzip.open(images_path, 'rb') as imgpath:
-        _ = int.from_bytes(imgpath.read(4), 'big')  # magic number
-        num_images = int.from_bytes(imgpath.read(4), 'big')
-        rows = int.from_bytes(imgpath.read(4), 'big')
-        cols = int.from_bytes(imgpath.read(4), 'big')
-        images = np.frombuffer(imgpath.read(), dtype=np.uint8).reshape(num_images, rows, cols)
-
-    # Normalize images to [0, 1]
-    images = images.astype(np.float32) / 255.0
-
-    # EMNIST-letters labels are 1-indexed: 1='a', ..., 26='z'
-    # We want 'o' = 15 and 'x' = 24
-    # We now expand this to include 'a' = 1 and 'b' = 2
-    mask_a = labels == 1 # 'a'
-    mask_b = labels == 2 # 'b'
-    mask_c = labels == 3 # 'c'
-    mask_d = labels == 4 # 'd'
-    mask_e = labels == 3 # 'e'
-    mask_f = labels == 4 # 'f'
-    mask_x = labels == 24  # 'x'
-    mask_o = labels == 15  # 'o'
-
-    #a_images = np.empty((0, *images.shape[1:]))
-    a_images = images[mask_a]
-    #b_images = np.empty((0, *images.shape[1:]))
-    b_images = images[mask_b]
-    c_images = images[mask_c]
-    d_images = images[mask_d]
-    e_images = images[mask_e]
-    f_images = images[mask_f]
-    x_images = images[mask_x]
-    o_images = images[mask_o]
-
-# Create one-hot encoded labels
-    a_labels = np.tile(np.array([[1, 0, 0, 0, 0, 0, 0, 0]]), (a_images.shape[0], 1))  # 'a'
-    b_labels = np.tile(np.array([[0, 1, 0, 0, 0, 0, 0, 0]]), (b_images.shape[0], 1))  # 'b'
-    c_labels = np.tile(np.array([[0, 0, 1, 0, 0, 0, 0, 0]]), (c_images.shape[0], 1))  # 'c'
-    d_labels = np.tile(np.array([[0, 0, 0, 1, 0, 0, 0, 0]]), (d_images.shape[0], 1))  # 'd'
-    e_labels = np.tile(np.array([[0, 0, 0, 0, 1, 0, 0, 0]]), (c_images.shape[0], 1))  # 'e'
-    f_labels = np.tile(np.array([[0, 0, 0, 0, 0, 1, 0, 0]]), (d_images.shape[0], 1))  # 'f'
-    o_labels = np.tile(np.array([[0, 0, 0, 0, 0, 0, 1, 0]]), (o_images.shape[0], 1))  # 'o'
-    x_labels = np.tile(np.array([[0, 0, 0, 0, 0, 0, 0, 1]]), (x_images.shape[0], 1))  # 'x'
-
-    # Combine and shuffle
-    combined_images = np.concatenate((a_images, b_images, c_images, d_images, e_images, f_images, x_images, o_images), axis=0)
-    combined_labels = np.concatenate((a_labels, b_labels, c_labels, d_labels, e_labels, f_labels, x_labels, o_labels), axis=0)
-
-    if max_samples:
-        combined_images = combined_images[:max_samples]
-        combined_labels = combined_labels[:max_samples]
-
-    indices = np.arange(combined_images.shape[0])
-    np.random.shuffle(indices)
-
-    combined_images = combined_images[indices]
-    combined_labels = combined_labels[indices]
-
-    # Flatten images for use in feedforward net
-    X = combined_images.reshape(combined_images.shape[0], -1)
-    Y = combined_labels
-
-    return X, Y
-
 def batch_samples(X, Y, batch_size):
-    n_batches = np.ceil( Y.size / batch_size)    
+    n_batches = np.ceil(len(Y) / batch_size)    
     X_batches = np.array_split(X, n_batches)
     Y_batches = np.array_split(Y, n_batches)
     return X_batches, Y_batches
@@ -165,74 +96,67 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     h1Limit = np.sqrt(6 / (n_f + n_h1n))
     h1W = np.random.randn(n_h1n, n_f) * h1Limit
     h1B = np.zeros((1, n_h1n))
+    hLayer1 = layer.layer(h1W, h1B, tanh, tanh_der)    
+
     # h2W holds the weights of the n_hn neurons in the second hidden layer.
     h2Limit = np.sqrt(6 / (n_f + n_h2n))
     h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
     h2B = np.zeros((1, n_h2n))
+    hLayer2 = layer.layer(h2W, h2B, tanh, tanh_der)
+
     # oW holds the weights of the n_on neuron in the output layer.    
     oLimit = np.sqrt(6 / (n_on + n_h2n))
     oW = np.random.randn(n_on, n_h2n) * oLimit
     oB = np.zeros((1, n_on))
+    oLayer = layer.layer(oW, oB, softmax, mse_der)
+
+    layers = [hLayer1, hLayer2, oLayer]
+
     # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
-    return h1W, h1B, h2W, h2B, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
+    return layers, cross_entropy_loss, cross_entropy_derivative
 
-def forward_pass(X, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation):
-    def forward_one_layer(X, W, b, activation):
-        # n_s number of samples
-        # n_f number of features
-        # n_n number of neurons
-        # X: n_s * n_f rows of inputs, columns of features
-        # W: n_n * n_f rows of neuron, columns of weights per feature
-        # b: n_n * 1 columns vector of biases
-        WT = W.T
-        # WT: n_f * n_n rows of weights per feature, colunmns of neurons
-        Z = X @ WT + b;
-        # Z: rows of outputs per input, columns of neurons?
-        A = activation(Z)
-        # A: activations of Z computer element-wise
-        return Z, A
+def forward_pass(layers, X):
+     zValues = []
+     aValues = []
+     a = X
+     for layer in layers:
+         z, a = layer.forward_pass(a)
+         zValues.append(z)
+         aValues.append(a)
+     return zValues, aValues
 
-    h1Z, h1A = forward_one_layer(X, h1W, h1B, hActivation) #h Activation is tanh for now
-    h2Z, h2A = forward_one_layer(h1A, h2W, h2B, hActivation) #h Activation is tanh for now
-    oZ, oA = forward_one_layer(h2A, oW, oB, oActivation) # oActivation is softmax for now
-    return h1Z, h1A, h2Z, h2A, oZ, oA
+def backward_pass(layers, X, loss_der_value, zValues, aValues):
+    # Output layer gradients    
+    grad_oW = (loss_der_value.T @ aValues[1]) / X.shape[0]
+    grad_oB = np.mean(loss_der_value, axis=0, keepdims=True)
 
-def backward_pass(X, Y, h1W, h1B, h1A, h1Z, h2W, h2B, h2A, h2Z, oW, oB, oA, oZ, hActivation_der):
-    def backward_one_layer(dL_dA, Z, A_prev, activation_der):
-        # dA_dZ element-wise activation function derivative
-        dA_dZ = activation_der(Z) 
-        # dL_dZ element-wise multiplication
-        dL_dZ = dL_dA * dA_dZ
-        grad_W = dL_dZ.T @ A_prev / A_prev.shape[0]
-        grad_B = np.mean(dL_dZ, axis=0, keepdims=True)
-        return dL_dZ, grad_W, grad_B                 
+    grad_W = [grad_oW]
+    grad_B = [grad_oB]
 
-    # Output layer gradient (simple now!)
-    dL_doZ = oA - Y  # predicted probabilities minus true one-hot labels
-    grad_oW = dL_doZ.T @ h2A / X.shape[0]
-    grad_oB = np.mean(dL_doZ, axis=0, keepdims=True)
+    prev_der_value = loss_der_value
 
-    # # output layer gradient
-    # dL_doA = loss_der(oA, Y_batch)
-    # dL_doZ, grad_oW, grad_oB = backward_one_layer(dL_doA, oZ, hA, oActivation_der)
+    # Iterate over the layers in reverse order, but skip the output layer, the last one, as we accounted for it above.
+    # for layer in layers[:-1][::-1]
+    layer_count = len(layers)
+    for i in range(layer_count)[:-1][::-1]:
+        next_layer_weights = layers[i + 1].W        
+        this_layer_z_value = zValues[i]
+        prev_layer_input = aValues[i - 1] if i > 0 else X
         
-    # hidden layer gradient
-    dL_dh2A =  dL_doZ @ oW
-    dL_dh2Z, grad_h2W, grad_h2B = backward_one_layer(dL_dh2A, h2Z, h1A, hActivation_der)
+        dL_dA = prev_der_value @ next_layer_weights
+        dL_dZ, grad_hW, grad_hB = layers[i].backward_one_layer(dL_dA, this_layer_z_value, prev_layer_input)
 
-    dL_dh1A = dL_dh2A @ h2W
-    dL_dh1Z, grad_h1W, grad_h1B = backward_one_layer(dL_dh1A, h1Z, X, hActivation_der)
+        prev_der_value = dL_dZ
 
-    return grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB
+        grad_W.insert(0, grad_hW)
+        grad_B.insert(0, grad_hB)
 
-def get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB):
-    oW -= learn_rate * grad_oW
-    oB -= learn_rate * grad_oB
-    h2W -= learn_rate * grad_h2W
-    h2B -= learn_rate * grad_h2B
-    h1W -= learn_rate * grad_h1W
-    h1B -= learn_rate * grad_h1B
-    return h1W, h1B, h2W, h2B, oW, oB
+    return grad_W, grad_B
+        
+def update_weights_and_biases(layers, learn_rate, grad_W, grad_B):
+    layers[2].update_weights_and_biases(learn_rate, grad_W[2], grad_B[2])
+    layers[1].update_weights_and_biases(learn_rate, grad_W[1], grad_B[1])
+    layers[0].update_weights_and_biases(learn_rate, grad_W[0], grad_B[0])
 
 n_f = 784
 n_h1n = 32
@@ -240,9 +164,9 @@ n_h2n = 32
 n_on = 8
 
 batch_size = 64
-epoch_count = 100
+epoch_count = 200
 learn_rate = 0.05
-X_emnist, Y_emnist = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
+X_emnist, Y_emnist = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 indices = np.arange(X_emnist.shape[0])
 np.random.shuffle(indices)
 X = X_emnist[indices]
@@ -267,15 +191,18 @@ print(f_count)
 print(o_count)
 print(x_count)
 
-h1W, h1B, h2W, h2B, oW, oB, hActivation, hActivation_der, oActivation, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-for epoch in range(epoch_count):    
+layers, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
+for epoch in range(epoch_count):
     for X_batch, Y_batch in zip(X_batches, Y_batches):
-        h1Z, h1A, h2Z, h2A, oZ, oA = forward_pass(X_batch, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
-        grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB = backward_pass(X_batch, Y_batch, h1W, h1B, h1A, h1Z, h2W, h2B, h2A, h2Z, oW, oB, oA, oZ, hActivation_der)        
-        h1W, h1B, h2W, h2B, oW, oB = get_updated_weights_and_biases(learn_rate, h1W, h1B, h2W, h2B, oW, oB, grad_h1W, grad_h1B, grad_h2W, grad_h2B, grad_oW, grad_oB)
+        zValues, aValues = forward_pass(layers, X_batch)
+        oA = aValues[-1]
+        loss_der_value = oA - Y_batch  # predicted probabilities minus true one-hot labels        
+        grad_W, grad_B = backward_pass(layers, X_batch, loss_der_value, zValues, aValues)        
+        update_weights_and_biases(layers, learn_rate, grad_W, grad_B)
     
     if epoch % 100 == 0 or epoch == epoch_count -1:
-        _, _, _, _, _, oA = forward_pass(X, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)        
+        _, aValues = forward_pass(layers, X)
+        oA = aValues[-1]
         mse_loss = mse(oA, Y)
         print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")  
         loss = loss_func(oA, Y)
@@ -287,8 +214,8 @@ total_count = 0
 mismatches = []
 def check_result(input_vector, expected):        
     global match_count, mismatch_count, total_count  # <-- add this line
-    _, _, _, _, _, oA = forward_pass(input_vector, h1W, h1B, h2W, h2B, oW, oB, hActivation, oActivation)            
-
+    _, aValues = forward_pass(layers, input_vector)
+    oA = aValues[-1]    
     prediction = rounded = (oA >= 0.5).astype(int)        
     if (np.array_equal(expected.flatten(), prediction.flatten())):
         match_count += 1        
@@ -301,7 +228,7 @@ def check_result(input_vector, expected):
         
     total_count += 1    
 
-X_test, Y_test = load_emnist_letters_abox("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
+X_test, Y_test = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
 for x, y in zip(X_test, Y_test):
     check_result(x, y)
 
