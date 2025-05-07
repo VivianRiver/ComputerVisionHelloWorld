@@ -18,6 +18,7 @@ from PIL import Image, ImageOps
 import numpy as np
 import matplotlib.pyplot as plt
 
+from DenseLayer import DenseLayer
 import emnist
 import layer
 
@@ -96,19 +97,19 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     h1Limit = np.sqrt(6 / (n_f + n_h1n))
     h1W = np.random.randn(n_h1n, n_f) * h1Limit
     h1B = np.zeros((1, n_h1n))
-    hLayer1 = layer.layer(h1W, h1B, tanh, tanh_der)    
+    hLayer1 = DenseLayer(h1W, h1B, tanh, tanh_der)    
 
     # h2W holds the weights of the n_hn neurons in the second hidden layer.
     h2Limit = np.sqrt(6 / (n_f + n_h2n))
     h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
     h2B = np.zeros((1, n_h2n))
-    hLayer2 = layer.layer(h2W, h2B, tanh, tanh_der)
+    hLayer2 = DenseLayer(h2W, h2B, tanh, tanh_der)
 
     # oW holds the weights of the n_on neuron in the output layer.    
     oLimit = np.sqrt(6 / (n_on + n_h2n))
     oW = np.random.randn(n_on, n_h2n) * oLimit
     oB = np.zeros((1, n_on))
-    oLayer = layer.layer(oW, oB, softmax, mse_der)
+    oLayer = DenseLayer(oW, oB, softmax, mse_der)
 
     layers = [hLayer1, hLayer2, oLayer]
 
@@ -144,7 +145,7 @@ def backward_pass(layers, X, loss_der_value, zValues, aValues):
         prev_layer_input = aValues[i - 1] if i > 0 else X
         
         dL_dA = prev_der_value @ next_layer_weights
-        dL_dZ, grad_hW, grad_hB = layers[i].backward_one_layer(dL_dA, this_layer_z_value, prev_layer_input)
+        dL_dZ, grad_hW, grad_hB = layers[i].backward_pass(dL_dA, this_layer_z_value, prev_layer_input)
 
         prev_der_value = dL_dZ
 
