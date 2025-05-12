@@ -37,6 +37,14 @@ def relu(x):
 def relu_der(x):
     return (x > 0).astype(float)
 
+def leaky_relu(x):
+    a = 0.1
+    return np.where(x > 0, x, a * x)
+
+def leaky_relu_der(x):
+    a = 0.1
+    return np.where(x > 0, 1, a)
+
 def tanh_der(x):
     return 1 - np.tanh(x) ** 2 
 
@@ -45,6 +53,14 @@ def sigmoid(x):
 
 def sigmoid_der(x):
     return sigmoid(x) * (1 - sigmoid(x))
+
+def swish(x):    
+    s = 1 / (1 + np.exp(-x))
+    return x * s
+
+def swish_der(x):    
+    s = 1 / (1 + np.exp(-x))
+    return s + x * s * (1 - x)
 
 def softmax(z):
     # Step 1: Stablize the inputs by subtracting the max per sample
@@ -92,35 +108,32 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     h1Limit = np.sqrt(6 / (n_f + n_h1n))
     h1W = np.random.randn(n_h1n, n_f) * h1Limit
     h1B = np.zeros((1, n_h1n))
-    hLayer1 = DenseLayer(h1W, h1B, relu, relu_der)    
+    hLayer1 = DenseLayer(h1W, h1B, tanh, tanh_der)    
 
     # h2W holds the weights of the n_hn neurons in the second hidden layer.
     h2Limit = np.sqrt(6 / (n_f + n_h2n))
     h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
     h2B = np.zeros((1, n_h2n))
-    hLayer2 = DenseLayer(h2W, h2B, relu, relu_der)
+    hLayer2 = DenseLayer(h2W, h2B, tanh, tanh_der)
 
     # h3W holds the weights of the n_hn neurons in the second hidden layer.
     # use same parameters as layer 2
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer3 = DenseLayer(h2W, h2B, tanh, tanh_der)
-
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer4 = DenseLayer(h2W, h2B, tanh, tanh_der)
-    
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer5 = DenseLayer(h2W, h2B, tanh, tanh_der)
+    # h3W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    # h3B = np.zeros((1, n_h2n))
+    # hLayer3 = DenseLayer(h3W, h3B, tanh, tanh_der)    
 
     # oW holds the weights of the n_on neuron in the output layer.    
     oLimit = np.sqrt(6 / (n_on + n_h2n))
     oW = np.random.randn(n_on, n_h2n) * oLimit
     oB = np.zeros((1, n_on))
-    oLayer = DenseLayer(oW, oB, softmax, mse_der)
+    oLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))
 
-    layers = [hLayer1, hLayer2, hLayer3, hLayer4, hLayer5, oLayer]
+    layers = [
+        hLayer1,
+        hLayer2,
+        # hLayer3,
+        oLayer
+    ]
     network = Network(layers)
 
     # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
@@ -129,7 +142,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
 n_f = 784
 n_h1n = 32
 n_h2n = 32
-n_on = 8
+n_on = 6
 
 X_emnist, Y_emnist = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 indices = np.arange(X_emnist.shape[0])
@@ -142,22 +155,18 @@ a_count = Y[Y[:,0] == 1].shape[0]
 b_count = Y[Y[:,1] == 1].shape[0]
 c_count = Y[Y[:,2] == 1].shape[0]
 d_count = Y[Y[:,3] == 1].shape[0]
-e_count = Y[Y[:,4] == 1].shape[0]
-f_count = Y[Y[:,5] == 1].shape[0]
-o_count = Y[Y[:,6] == 1].shape[0]
-x_count = Y[Y[:,7] == 1].shape[0]
+o_count = Y[Y[:,4] == 1].shape[0]
+x_count = Y[Y[:,5] == 1].shape[0]
 
 print(a_count)
 print(b_count)
 print(c_count)
 print(d_count)
-print(e_count)
-print(f_count)
 print(o_count)
 print(x_count)
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 1000
+epoch_count = 300
 batch_size = 64
 learn_rate = 0.05
 
@@ -176,7 +185,7 @@ def check_result(input_vector, expected):
         match_count += 1        
     else:
         mismatch_count += 1
-        class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
+        class_names = ["A", "B", "C", "D", "O", "X"]  # Adjust for your classes
         expected_label = np.argmax(expected)
         predicted_label = np.argmax(oA)
         mismatches.append((input_vector, expected_label, predicted_label))
@@ -194,7 +203,7 @@ print(f"Total: {total_count}")
 fig, axes = plt.subplots(16, 16, figsize=(10, 10))
 axes = axes.flatten()
 
-class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
+class_names = ["A", "B", "C", "D", "O", "X"]  # Adjust for your classes
 
 for ax, (img, true_label, pred_label) in zip(axes, mismatches):
     img_corrected = img.reshape(28, 28).T  # ← just this
