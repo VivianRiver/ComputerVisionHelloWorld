@@ -25,6 +25,7 @@
     <Compile Include="ConvLayer.py" />
     <Compile Include="DenseLayer.py" />
     <Compile Include="emnist.py" />
+    <Compile Include="FlattenLayer.py" />
     <Compile Include="Layer.py" />
     <Compile Include="Network.py" />
   </ItemGroup>

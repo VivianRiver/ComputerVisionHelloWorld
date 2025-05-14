@@ -19,6 +19,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from DenseLayer import DenseLayer
+from ConvLayer import ConvLayer
+from FlattenLayer import FlattenLayer
 from Network import Network
 import emnist
 import layer
@@ -102,42 +104,55 @@ def load_image_as_input_vector(path):
     array = img_array.flatten().reshape(1, -1)
     return array
 
-def init_network(n_f, n_h1n, n_h2n, n_on):
-    # initialize weights and biases
-    # h1W holds the weights of the n_hn neurons in the first hidden layer.
-    h1Limit = np.sqrt(6 / (n_f + n_h1n))
-    h1W = np.random.randn(n_h1n, n_f) * h1Limit
-    h1B = np.zeros((1, n_h1n))
-    hLayer1 = DenseLayer(h1W, h1B, tanh, tanh_der)    
+def init_network():
+    # Input image dimensions (e.g., EMNIST: 28x28 grayscale)
+    image_height = 28
+    image_width = 28
+    in_channels = 1
+    #n_classes = 26  # A-Z
+    n_classes = 6
 
-    # h2W holds the weights of the n_hn neurons in the second hidden layer.
-    h2Limit = np.sqrt(6 / (n_f + n_h2n))
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer2 = DenseLayer(h2W, h2B, tanh, tanh_der)
+    # Conv layer: 8 filters of size 3x3
+    num_filters = 8
+    kernel_size = 3
+    convW = np.random.randn(num_filters, kernel_size, kernel_size, in_channels) * np.sqrt(2 / (kernel_size * kernel_size * in_channels))
+    convB = np.zeros((num_filters,))
+    convLayer = ConvLayer(convW, convB, relu, relu_der)
 
-    # h3W holds the weights of the n_hn neurons in the second hidden layer.
-    # use same parameters as layer 2
-    # h3W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    # h3B = np.zeros((1, n_h2n))
-    # hLayer3 = DenseLayer(h3W, h3B, tanh, tanh_der)    
+    # Flatten layer (turns 4D conv output into 2D for dense layer)
+    flattenLayer = FlattenLayer()
+    flattened_size = (image_height - kernel_size + 1) * (image_width - kernel_size + 1) * num_filters
 
-    # oW holds the weights of the n_on neuron in the output layer.    
-    oLimit = np.sqrt(6 / (n_on + n_h2n))
-    oW = np.random.randn(n_on, n_h2n) * oLimit
-    oB = np.zeros((1, n_on))
-    oLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))
+    # Hidden dense layer
+    n_hidden = 64
+    hW = np.random.randn(n_hidden, flattened_size) * np.sqrt(6 / (flattened_size + n_hidden))
+    hB = np.zeros((1, n_hidden))
+    hiddenLayer = DenseLayer(hW, hB, tanh, tanh_der)
 
+    # Output dense layer
+    oW = np.random.randn(n_classes, n_hidden) * np.sqrt(6 / (n_hidden + n_classes))
+    oB = np.zeros((1, n_classes))
+    outputLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))  # Softmax + cross-entropy trick
+
+    # Build network
     layers = [
-        hLayer1,
-        hLayer2,
-        # hLayer3,
-        oLayer
+        convLayer,
+        flattenLayer,
+        hiddenLayer,
+        outputLayer
     ]
     network = Network(layers)
 
-    # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
-    return network, cross_entropy_loss, cross_entropy_derivative
+    # Loss and derivative for softmax + cross-entropy
+    def cross_entropy(y_pred, y_true):
+        eps = 1e-12
+        y_pred = np.clip(y_pred, eps, 1 - eps)
+        return -np.sum(y_true * np.log(y_pred), axis=1)
+
+    def cross_entropy_derivative(y_pred, y_true):
+        return y_pred - y_true
+
+    return network, cross_entropy, cross_entropy_derivative
 
 n_f = 784
 n_h1n = 32
@@ -165,7 +180,9 @@ print(d_count)
 print(o_count)
 print(x_count)
 
-network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
+# network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
+network, loss_func, loss_der = init_network()
+
 epoch_count = 300
 batch_size = 64
 learn_rate = 0.05

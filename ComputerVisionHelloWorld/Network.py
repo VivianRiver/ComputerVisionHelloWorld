@@ -7,14 +7,17 @@ class Network:
     def train(self, X, Y, loss_function, loss_der, epoch_count, batch_size, learn_rate):
         X_batches, Y_batches = self.batch_samples(X, Y, batch_size)
         for epoch in range(epoch_count):
+            batch_number = 0
             for X_batch, Y_batch in zip(X_batches, Y_batches):
+                batch_number += 1
+                print(batch_number)
                 zValues, aValues = self.forward_pass(X_batch)
                 oA = aValues[-1]
                 loss_der_value = oA - Y_batch  # predicted probabilities minus true one-hot labels        
                 grad_W, grad_B = self.backward_pass(X_batch, loss_der_value, zValues, aValues)        
                 self.update_weights_and_biases(learn_rate, grad_W, grad_B)
     
-            if epoch % 100 == 0 or epoch == epoch_count - 1:
+            if 1 == 1: #epoch % 100 == 0 or epoch == epoch_count - 1:
                 _, aValues = self.forward_pass(X)
                 oA = aValues[-1]
                 # mse_loss = mse(oA, Y)
