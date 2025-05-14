@@ -10,7 +10,7 @@ class Network:
             batch_number = 0
             for X_batch, Y_batch in zip(X_batches, Y_batches):
                 batch_number += 1
-                print(batch_number)
+                # print(batch_number)
                 zValues, aValues = self.forward_pass(X_batch)
                 oA = aValues[-1]
                 loss_der_value = oA - Y_batch  # predicted probabilities minus true one-hot labels        

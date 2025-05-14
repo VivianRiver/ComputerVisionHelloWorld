@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 from layer import Layer
 
 class ConvLayer(Layer):
@@ -17,41 +17,49 @@ class ConvLayer(Layer):
     def forward_pass(self, X):
         X = X.reshape(-1, 28, 28, 1)
 
-        # Input shape: (n_s, H_in, W_in, in_channels)
         n_s, H_in, W_in, in_channels = X.shape
         n_f, K_h, K_w, _ = self.W.shape
         stride = self.stride
 
-        # Output dimensions
         H_out = (H_in - K_h) // stride + 1
         W_out = (W_in - K_w) // stride + 1
 
-        # Allocate output tensor
-        Z = np.zeros((n_s, H_out, W_out, n_f))
+        # Save shape for backward
+        self.X_shape = X.shape
+        self.output_shape = (n_s, H_out, W_out, n_f)
 
-        # Convolution
-        for b in range(n_s):                 # for each image in the batch
-            for f in range(n_f):             # for each filter
-                for i in range(H_out):       # slide vertically
-                    for j in range(W_out):   # slide horizontally
-                        vert_start = i * stride
-                        vert_end = vert_start + K_h
-                        horiz_start = j * stride
-                        horiz_end = horiz_start + K_w
-                    
-                        patch = X[b, vert_start:vert_end, horiz_start:horiz_end, :]
-                        kernel = self.W[f]
-                        bias = self.b[f]
-                    
-                        conv = np.sum(patch * kernel) + bias
-                        Z[b, i, j, f] = conv
+        # im2col: extract patches
+        X_col = np.lib.stride_tricks.as_strided(
+            X,
+            shape=(n_s, H_out, W_out, K_h, K_w, in_channels),
+            strides=(
+                X.strides[0],
+                stride * X.strides[1],
+                stride * X.strides[2],
+                X.strides[1],
+                X.strides[2],
+                X.strides[3]
+            )
+        )
 
-        # Apply activation
+        # Reshape: (n_s, H_out, W_out, K_h, K_w, C) → (n_s * H_out * W_out, K_h * K_w * C)
+        X_col = X_col.reshape(-1, K_h * K_w * in_channels)
+
+        # Reshape filters: (n_f, K_h, K_w, C) → (n_f, K_h * K_w * C)
+        W_col = self.W.reshape(n_f, -1)
+
+        # Compute: (n_s * H_out * W_out, K_h * K_w * C) @ (K_h * K_w * C, n_f).T → (n_s * H_out * W_out, n_f)
+        Z = X_col @ W_col.T + self.b
+
+        # Reshape Z to output shape: (n_s, H_out, W_out, n_f)
+        Z = Z.reshape(n_s, H_out, W_out, n_f)
+
         A = self.activation(Z)
         return Z, A
 
     def backward_pass(self, dL_dA, Z, A_prev):        
         A_prev = A_prev.reshape(-1, 28, 28, 1)
+        
         n_s, H_in, W_in, in_channels = A_prev.shape
         n_f, K_h, K_w, _ = self.W.shape
         stride = self.stride
@@ -59,39 +67,52 @@ class ConvLayer(Layer):
         H_out = (H_in - K_h) // stride + 1
         W_out = (W_in - K_w) // stride + 1
 
-        # Derivative of activation function
+        # Flatten the input using the same im2col strategy
+        X_col = np.lib.stride_tricks.as_strided(
+            A_prev,
+            shape=(n_s, H_out, W_out, K_h, K_w, in_channels),
+            strides=(
+                A_prev.strides[0],
+                stride * A_prev.strides[1],
+                stride * A_prev.strides[2],
+                A_prev.strides[1],
+                A_prev.strides[2],
+                A_prev.strides[3]
+            )
+        ).reshape(-1, K_h * K_w * in_channels)
+
+        # Compute dL/dZ = dL/dA * dA/dZ
         dA_dZ = self.activation_der(Z)
-        dL_dZ = dL_dA * dA_dZ
+        dL_dZ = dL_dA * dA_dZ          # shape: (n_s, H_out, W_out, n_f)
+        dL_dZ_flat = dL_dZ.reshape(-1, n_f)
 
-        # Initialize gradients
-        grad_W = np.zeros_like(self.W)       # shape: (n_f, K_h, K_w, in_channels)
-        grad_B = np.zeros_like(self.b)       # shape: (n_f,)
-        dL_dA_prev = np.zeros_like(A_prev)   # shape: (n_s, H_in, W_in, in_channels)
+        # Gradient w.r.t. filters
+        grad_W = dL_dZ_flat.T @ X_col
+        grad_W = grad_W.reshape(n_f, K_h, K_w, in_channels)
 
-        for b in range(n_s):
-            for f in range(n_f):
-                for i in range(H_out):
-                    for j in range(W_out):
-                        vert_start = i * stride
-                        vert_end = vert_start + K_h
-                        horiz_start = j * stride
-                        horiz_end = horiz_start + K_w
+        # Gradient w.r.t. bias
+        grad_B = np.sum(dL_dZ_flat, axis=0)
 
-                        # Patch from input
-                        patch = A_prev[b, vert_start:vert_end, horiz_start:horiz_end, :]  # (K_h, K_w, in_channels)
-                        delta = dL_dZ[b, i, j, f]  # scalar
+        # Backprop to input
+        W_col = self.W.reshape(n_f, -1)
+        dL_dA_prev_col = dL_dZ_flat @ W_col  # shape: (n_s * H_out * W_out, K_h * K_w * in_channels)
 
-                        # Accumulate gradients
-                        grad_W[f] += delta * patch
-                        grad_B[f] += delta
-                        dL_dA_prev[b, vert_start:vert_end, horiz_start:horiz_end, :] += delta * self.W[f]
+        # Initialize empty gradient for input
+        dL_dA_prev = np.zeros((n_s, H_in, W_in, in_channels))
 
-        # Normalize by batch size
-        grad_W /= n_s
-        grad_B /= n_s
-        dL_dA_prev /= n_s
+        # Map patches back into the input gradient
+        col = 0
+        for i in range(H_out):
+            for j in range(W_out):
+                patch = dL_dA_prev_col[col::H_out*W_out, :].reshape(n_s, K_h, K_w, in_channels)
+                vert_start = i * stride
+                vert_end = vert_start + K_h
+                horiz_start = j * stride
+                horiz_end = horiz_start + K_w
+                dL_dA_prev[:, vert_start:vert_end, horiz_start:horiz_end, :] += patch
+                col += 1
 
-        return dL_dA_prev, grad_W, grad_B
+        return dL_dA_prev, grad_W / n_s, grad_B / n_s
 
     def update_weights_and_biases(self, learn_rate, grad_W, grad_b):
         self.W -= learn_rate * grad_W
