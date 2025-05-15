@@ -26,8 +26,8 @@ def load_emnist_letters(images_path, labels_path, max_samples=None):
     mask_b = labels == 2 # 'b'
     mask_c = labels == 3 # 'c'
     mask_d = labels == 4 # 'd'
-    mask_e = labels == 3 # 'e'
-    mask_f = labels == 4 # 'f'
+    mask_e = labels == 5 # 'e'
+    mask_f = labels == 6 # 'f'
     mask_x = labels == 24  # 'x'
     mask_o = labels == 15  # 'o'
 

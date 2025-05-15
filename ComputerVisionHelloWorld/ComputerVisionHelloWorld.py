@@ -13,6 +13,11 @@
 # With batch size of 64,
 # MSE = .0000004627
 
+# Training on letters A, B, C, D, E, F, O, X
+# With 5 hidden layers
+# CE = 0.0000650340
+# Match Rate = 94%
+
 from turtle import backward
 from PIL import Image, ImageOps
 import numpy as np
