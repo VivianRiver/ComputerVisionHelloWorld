@@ -105,45 +105,54 @@ def load_image_as_input_vector(path):
     return array
 
 def init_network():
-    # Input image dimensions (e.g., EMNIST: 28x28 grayscale)
     image_height = 28
     image_width = 28
     in_channels = 1
-    #n_classes = 26  # A-Z
-    n_classes = 6
+    n_classes = 8
 
-    # Conv layer: 8 filters of size 3x3
-    num_filters = 8
-    kernel_size = 3
-    convW = np.random.randn(num_filters, kernel_size, kernel_size, in_channels) * np.sqrt(2 / (kernel_size * kernel_size * in_channels))
-    convB = np.zeros((num_filters,))
-    convLayer = ConvLayer(convW, convB, relu, relu_der)
+    # === First ConvLayer: 16 filters, 3x3 ===
+    conv1_filters = 16
+    conv1_kernel = 5
+    conv1W = np.random.randn(conv1_filters, conv1_kernel, conv1_kernel, in_channels) * np.sqrt(2 / (conv1_kernel ** 2 * in_channels))
+    conv1B = np.zeros((conv1_filters,))
+    conv1Layer = ConvLayer(conv1W, conv1B, relu, relu_der, 1)
 
-    # Flatten layer (turns 4D conv output into 2D for dense layer)
-    flattenLayer = FlattenLayer()
-    flattened_size = (image_height - kernel_size + 1) * (image_width - kernel_size + 1) * num_filters
+    # === Second ConvLayer: 8 filters, 3x3 ===
+    conv2_filters = 8
+    conv2_kernel = 3
+    conv2W = np.random.randn(conv2_filters, conv2_kernel, conv2_kernel, conv1_filters) * np.sqrt(2 / (conv2_kernel ** 2 * conv1_filters))
+    conv2B = np.zeros((conv2_filters,))
+    conv2Layer = ConvLayer(conv2W, conv2B, relu, relu_der, 2)
 
-    # Hidden dense layer
+    # === Flatten Layer ===
+    # After two 3x3 convolutions with stride 1 and no padding:
+    # 28 → 26 → 24
+    # flattened_size = 24 * 24 * conv2_filters
+    flattened_size = 968 #1152 #11 * 11 * 8
+    flattenLayer = FlattenLayer()    
+
+    # === Dense Hidden Layer ===
     n_hidden = 64
     hW = np.random.randn(n_hidden, flattened_size) * np.sqrt(6 / (flattened_size + n_hidden))
     hB = np.zeros((1, n_hidden))
     hiddenLayer = DenseLayer(hW, hB, tanh, tanh_der)
 
-    # Output dense layer
+    # === Output Layer ===
     oW = np.random.randn(n_classes, n_hidden) * np.sqrt(6 / (n_hidden + n_classes))
     oB = np.zeros((1, n_classes))
-    outputLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))  # Softmax + cross-entropy trick
+    outputLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))
 
-    # Build network
+    # === Build Network ===
     layers = [
-        convLayer,
+        conv1Layer,
+        conv2Layer,
         flattenLayer,
         hiddenLayer,
         outputLayer
     ]
     network = Network(layers)
 
-    # Loss and derivative for softmax + cross-entropy
+    # === Loss Functions ===
     def cross_entropy(y_pred, y_true):
         eps = 1e-12
         y_pred = np.clip(y_pred, eps, 1 - eps)
@@ -157,7 +166,7 @@ def init_network():
 n_f = 784
 n_h1n = 32
 n_h2n = 32
-n_on = 6
+n_on = 8
 
 X_emnist, Y_emnist = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 indices = np.arange(X_emnist.shape[0])
@@ -170,21 +179,25 @@ a_count = Y[Y[:,0] == 1].shape[0]
 b_count = Y[Y[:,1] == 1].shape[0]
 c_count = Y[Y[:,2] == 1].shape[0]
 d_count = Y[Y[:,3] == 1].shape[0]
-o_count = Y[Y[:,4] == 1].shape[0]
-x_count = Y[Y[:,5] == 1].shape[0]
+e_count = Y[Y[:,4] == 1].shape[0]
+f_count = Y[Y[:,5] == 1].shape[0]
+o_count = Y[Y[:,6] == 1].shape[0]
+x_count = Y[Y[:,7] == 1].shape[0]
 
 print(a_count)
 print(b_count)
 print(c_count)
 print(d_count)
+print(e_count)
+print(f_count)
 print(o_count)
 print(x_count)
 
 # network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
 network, loss_func, loss_der = init_network()
 
-epoch_count = 300
-batch_size = 64
+epoch_count = 50
+batch_size = 128
 learn_rate = 0.05
 
 network.train(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
@@ -220,7 +233,7 @@ print(f"Total: {total_count}")
 fig, axes = plt.subplots(16, 16, figsize=(10, 10))
 axes = axes.flatten()
 
-class_names = ["A", "B", "C", "D", "O", "X"]  # Adjust for your classes
+class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
 
 for ax, (img, true_label, pred_label) in zip(axes, mismatches):
     img_corrected = img.reshape(28, 28).T  # ← just this

@@ -2,7 +2,7 @@
 from layer import Layer
 
 class ConvLayer(Layer):
-    def __init__(self, W, b, activation, activation_der):
+    def __init__(self, W, b, activation, activation_der, stride):
         # W.shape = (n_filters, kernel_height, kernel_width, input_channels)
         self.W = W
         # b.shape = (n_filters,)
@@ -10,12 +10,13 @@ class ConvLayer(Layer):
         self.activation = activation
         self.activation_der = activation_der
 
-        self.stride = 1
+        self.stride = stride
 
         return    
 
-    def forward_pass(self, X):
-        X = X.reshape(-1, 28, 28, 1)
+    def forward_pass(self, X):                
+        if X.ndim < 4:
+            X = X.reshape(-1, 28, 28, 1)
 
         n_s, H_in, W_in, in_channels = X.shape
         n_f, K_h, K_w, _ = self.W.shape
@@ -57,8 +58,9 @@ class ConvLayer(Layer):
         A = self.activation(Z)
         return Z, A
 
-    def backward_pass(self, dL_dA, Z, A_prev):        
-        A_prev = A_prev.reshape(-1, 28, 28, 1)
+    def backward_pass(self, dL_dA, Z, A_prev):                      
+        if A_prev.ndim == 2:
+            A_prev = A_prev.reshape(-1, 28, 28, 1)
         
         n_s, H_in, W_in, in_channels = A_prev.shape
         n_f, K_h, K_w, _ = self.W.shape

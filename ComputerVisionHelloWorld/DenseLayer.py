@@ -10,6 +10,10 @@ class DenseLayer(Layer):
         return    
 
     def forward_pass(self, X):
+
+        # print("Flattened input shape:", X.shape)
+        # print("Dense layer weight shape:", self.W.shape)
+
         # n_s number of samples
         # n_f number of features
         # n_n number of neurons

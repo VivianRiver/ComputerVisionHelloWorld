@@ -42,17 +42,19 @@ def load_emnist_letters(images_path, labels_path, max_samples=None):
     o_images = images[mask_o]
 
 # Create one-hot encoded labels
-    a_labels = np.tile(np.array([[1, 0, 0, 0, 0, 0 ]]), (a_images.shape[0], 1))  # 'a'
-    b_labels = np.tile(np.array([[0, 1, 0, 0, 0, 0 ]]), (b_images.shape[0], 1))  # 'b'
-    c_labels = np.tile(np.array([[0, 0, 1, 0, 0, 0 ]]), (c_images.shape[0], 1))  # 'c'
-    d_labels = np.tile(np.array([[0, 0, 0, 1, 0, 0 ]]), (d_images.shape[0], 1))  # 'd'    
-    o_labels = np.tile(np.array([[0, 0, 0, 0, 1, 0 ]]), (d_images.shape[0], 1))  # 'o'    
-    x_labels = np.tile(np.array([[0, 0, 0, 0, 0, 1 ]]), (d_images.shape[0], 1))  # 'x'    
+    a_labels = np.tile(np.array([[1, 0, 0, 0, 0, 0, 0, 0 ]]), (a_images.shape[0], 1))  # 'a'
+    b_labels = np.tile(np.array([[0, 1, 0, 0, 0, 0, 0, 0 ]]), (b_images.shape[0], 1))  # 'b'
+    c_labels = np.tile(np.array([[0, 0, 1, 0, 0, 0, 0, 0 ]]), (c_images.shape[0], 1))  # 'c'
+    d_labels = np.tile(np.array([[0, 0, 0, 1, 0, 0, 0, 0 ]]), (d_images.shape[0], 1))  # 'd'    
+    e_labels = np.tile(np.array([[0, 0, 0, 0, 1, 0, 0, 0 ]]), (c_images.shape[0], 1))  # 'c'
+    f_labels = np.tile(np.array([[0, 0, 0, 0, 0, 1, 0, 0 ]]), (d_images.shape[0], 1))  # 'e'    
+    o_labels = np.tile(np.array([[0, 0, 0, 0, 0, 0, 1, 0 ]]), (d_images.shape[0], 1))  # 'f'    
+    x_labels = np.tile(np.array([[0, 0, 0, 0, 0, 0, 0, 1 ]]), (d_images.shape[0], 1))  # 'x'    
     
 
     # Combine and shuffle
-    combined_images = np.concatenate((a_images, b_images, c_images, d_images, o_images, x_images), axis=0)
-    combined_labels = np.concatenate((a_labels, b_labels, c_labels, d_labels, o_labels, x_labels), axis=0)
+    combined_images = np.concatenate((a_images, b_images, c_images, d_images, e_images, f_images, o_images, x_images), axis=0)
+    combined_labels = np.concatenate((a_labels, b_labels, c_labels, d_labels, e_labels, f_labels, o_labels, x_labels), axis=0)
 
     if max_samples:
         combined_images = combined_images[:max_samples]
