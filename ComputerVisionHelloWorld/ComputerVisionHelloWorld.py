@@ -23,6 +23,12 @@
 # CE = 0.1163045366
 # Match Rate = 92%
 
+# Training on letters A, B, C, D, E, F, G, H, I, J, O, X
+# With 5 hidden layers, 200 epochs
+# CE = 0.1368096434
+# Match Rate = 91%
+# Interestingly, not only does it level out here, but if training continues, it fails catastrophically at about epoch 800 and match rate drops to 0.
+
 from turtle import backward
 from PIL import Image, ImageOps
 import numpy as np
