@@ -18,6 +18,11 @@
 # CE = 0.0000650340
 # Match Rate = 94%
 
+# Training on letters A, B, C, D, E, F, G, H, O, X
+# With 5 hidden layers
+# CE = 0.1163045366
+# Match Rate = 92%
+
 from turtle import backward
 from PIL import Image, ImageOps
 import numpy as np
@@ -25,7 +30,7 @@ import matplotlib.pyplot as plt
 
 from DenseLayer import DenseLayer
 from Network import Network
-import emnist
+from emnist import Emnist
 import layer
 
 np.random.seed(42)
@@ -131,38 +136,21 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
     return network, cross_entropy_loss, cross_entropy_derivative
 
+emnist = Emnist("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
+X_emnist, Y_emnist = emnist.X, emnist.Y
+
 n_f = 784
 n_h1n = 32
 n_h2n = 32
-n_on = 8
+n_on = emnist.letter_count
 
-X_emnist, Y_emnist = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 indices = np.arange(X_emnist.shape[0])
 np.random.shuffle(indices)
 X = X_emnist[indices]
 Y = Y_emnist[indices]
 
-
-a_count = Y[Y[:,0] == 1].shape[0]
-b_count = Y[Y[:,1] == 1].shape[0]
-c_count = Y[Y[:,2] == 1].shape[0]
-d_count = Y[Y[:,3] == 1].shape[0]
-e_count = Y[Y[:,4] == 1].shape[0]
-f_count = Y[Y[:,5] == 1].shape[0]
-o_count = Y[Y[:,6] == 1].shape[0]
-x_count = Y[Y[:,7] == 1].shape[0]
-
-print(a_count)
-print(b_count)
-print(c_count)
-print(d_count)
-print(e_count)
-print(f_count)
-print(o_count)
-print(x_count)
-
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 1000
+epoch_count = 1_000
 batch_size = 64
 learn_rate = 0.05
 
@@ -181,14 +169,15 @@ def check_result(input_vector, expected):
         match_count += 1        
     else:
         mismatch_count += 1
-        class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
+        class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "O", "X"]  # Adjust for your classes
         expected_label = np.argmax(expected)
         predicted_label = np.argmax(oA)
         mismatches.append((input_vector, expected_label, predicted_label))
         
     total_count += 1    
 
-X_test, Y_test = emnist.load_emnist_letters("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
+emnist_test = Emnist("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
+X_test, Y_test = emnist_test.X, emnist_test.Y
 for x, y in zip(X_test, Y_test):
     check_result(x, y)
 
@@ -199,7 +188,7 @@ print(f"Total: {total_count}")
 fig, axes = plt.subplots(16, 16, figsize=(10, 10))
 axes = axes.flatten()
 
-class_names = ["A", "B", "C", "D", "E", "F", "O", "X"]  # Adjust for your classes
+class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "O", "X"]  # Adjust for your classes
 
 for ax, (img, true_label, pred_label) in zip(axes, mismatches):
     img_corrected = img.reshape(28, 28).T  # ← just this
