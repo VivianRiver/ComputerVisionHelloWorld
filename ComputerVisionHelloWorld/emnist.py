@@ -2,7 +2,7 @@ import numpy as np
 import gzip
 
 class Emnist:
-    def __init__(self, images_path, labels_path, max_samples=None):        
+    def __init__(self, letters, images_path, labels_path, max_samples=None):        
         # Load labels
         with gzip.open(labels_path, 'rb') as lbpath:
             _ = int.from_bytes(lbpath.read(4), 'big')  # magic number
@@ -19,9 +19,8 @@ class Emnist:
 
         # Normalize images to [0, 1]
         images = images.astype(np.float32) / 255.0
-
-        # letters = ['a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'o', 'x']
-        letters = ['o', 'x']
+        
+        #letters = ['o', 'x']
         letter_count = len(letters)
 
         combined_images = []
@@ -57,6 +56,7 @@ class Emnist:
 
         self.X = X
         self.Y = Y
+        self.letters = letters
         self.letter_count = letter_count
     def one_hot(self, length, index):
         array = np.zeros(length, dtype=int)

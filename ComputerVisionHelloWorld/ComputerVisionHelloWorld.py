@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 from DenseLayer import DenseLayer
 from Network import Network
 from emnist import Emnist
+from LetterDedications import letters
 import layer
 
 np.random.seed(42)
@@ -46,9 +47,6 @@ def relu(x):
 
 def relu_der(x):
     return (x > 0).astype(float)
-
-def tanh_der(x):
-    return 1 - np.tanh(x) ** 2 
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -136,7 +134,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
     return network, cross_entropy_loss, cross_entropy_derivative
 
-emnist = Emnist("c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
+emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 X_emnist, Y_emnist = emnist.X, emnist.Y
 
 n_f = 784
@@ -150,7 +148,7 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 1_000
+epoch_count = 200
 batch_size = 64
 learn_rate = 0.05
 
@@ -168,15 +166,14 @@ def check_result(input_vector, expected):
     if (np.array_equal(expected.flatten(), prediction.flatten())):
         match_count += 1        
     else:
-        mismatch_count += 1
-        class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "O", "X"]  # Adjust for your classes
+        mismatch_count += 1        
         expected_label = np.argmax(expected)
         predicted_label = np.argmax(oA)
         mismatches.append((input_vector, expected_label, predicted_label))
         
     total_count += 1    
 
-emnist_test = Emnist("c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
+emnist_test = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-test-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-test-labels-idx1-ubyte.gz")
 X_test, Y_test = emnist_test.X, emnist_test.Y
 for x, y in zip(X_test, Y_test):
     check_result(x, y)
@@ -188,7 +185,7 @@ print(f"Total: {total_count}")
 fig, axes = plt.subplots(16, 16, figsize=(10, 10))
 axes = axes.flatten()
 
-class_names = ["A", "B", "C", "D", "E", "F", "G", "H", "O", "X"]  # Adjust for your classes
+class_names = emnist.letters  # Adjust for your classes
 
 for ax, (img, true_label, pred_label) in zip(axes, mismatches):
     img_corrected = img.reshape(28, 28).T  # ← just this
