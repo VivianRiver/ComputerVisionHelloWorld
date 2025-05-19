@@ -58,5 +58,4 @@ letters = ['a', 'b', 'c', 'd',
 # use as I practice working with neural networks.
     'm', 'n',
 
-
            'o', 'x']
