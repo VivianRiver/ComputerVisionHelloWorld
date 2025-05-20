@@ -53,5 +53,4 @@ class ShapeLogger:
     def display_backward(self):
         print("\n🔁 BACKWARD PASS SHAPES:")
         for name, dLdA, Z, Aprev in self.backward_shapes:
-            print(f"Layer {name:<20} | dL/dA: {dLdA} | Z: {Z} | A_prev: {Aprev}")
-        print("\n")
+            print(f"Layer {name:<20} | dL/dA: {dLdA} | Z: {Z} | A_prev: {Aprev}")        
