@@ -21,7 +21,15 @@ class Layer(ABC):
         pass
 
     def backward_pass(self, dL_dA, Z, A_prev):
-        dL_dZ, grad_W, grad_B = self._backward_core(dL_dA, Z, A_prev)        
+        try:
+            dL_dZ, grad_W, grad_B = self._backward_core(dL_dA, Z, A_prev)
+        except Exception as e:
+            print(f"\n Exception in layer {self.__class__.__name__}: {e}")            
+            print(f"dL_dA.shape: {dL_dA.shape}")
+            print(f"Z.shape: {Z.shape}")
+            print(f"A_prev.shape: {A_prev.shape}")
+            raise
+        
         if (self.print_all):
             self.shapeLogger.log_backward(self.__class__.__name__, dL_dA.shape, Z.shape, A_prev.shape)
             self.shapeLogger.display_backward()
