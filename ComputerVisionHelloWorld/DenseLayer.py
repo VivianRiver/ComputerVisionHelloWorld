@@ -7,9 +7,9 @@ class DenseLayer(Layer):
         self.b = b
         self.activation = activation
         self.activation_der = activation_der
-        return    
+        super().__init__()
 
-    def forward_pass(self, X):
+    def _forward_core(self, X):
         # n_s number of samples
         # n_f number of features
         # n_n number of neurons
@@ -24,7 +24,7 @@ class DenseLayer(Layer):
         # A: activations of Z computer element-wise
         return Z, A
 
-    def backward_pass(self, dL_dA, Z, A_prev):
+    def _backward_core(self, dL_dA, Z, A_prev):
         # dA_dZ element-wise activation function derivative
         dA_dZ = self.activation_der(Z) 
         # dL_dZ element-wise multiplication
