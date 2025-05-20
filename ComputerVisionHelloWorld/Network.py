@@ -53,6 +53,7 @@ class Network:
         # Iterate over the layers in reverse order, but skip the output layer, the last one, as we accounted for it above.
         # for layer in layers[:-1][::-1]
         layer_count = len(self.layers)
+        self.layers[layer_count - 1].print_all = False
         for i in range(layer_count)[:-1][::-1]:
             next_layer_weights = self.layers[i + 1].W        
             this_layer_z_value = zValues[i]
