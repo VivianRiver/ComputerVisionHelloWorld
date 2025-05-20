@@ -132,7 +132,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     oLimit = np.sqrt(6 / (n_on + n_h2n))
     oW = np.random.randn(n_on, n_h2n) * oLimit
     oB = np.zeros((1, n_on))
-    oLayer = DenseLayer(oW, oB, softmax, mse_der)
+    oLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))    
 
     layers = [hLayer1, hLayer2, hLayer3, hLayer4, hLayer5, oLayer]
     network = Network(layers)
