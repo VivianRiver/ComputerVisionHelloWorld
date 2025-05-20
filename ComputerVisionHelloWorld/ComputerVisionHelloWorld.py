@@ -137,8 +137,16 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     layers = [hLayer1, hLayer2, hLayer3, hLayer4, hLayer5, oLayer]
     network = Network(layers)
 
-    # return hW, hB, oW, oB, tanh, tanh_der, softmax, cross_entropy_loss, cross_entropy_derivative
-    return network, cross_entropy_loss, cross_entropy_derivative
+    # === Loss Functions ===
+    def cross_entropy(y_pred, y_true):
+        eps = 1e-12
+        y_pred = np.clip(y_pred, eps, 1 - eps)
+        return -np.sum(y_true * np.log(y_pred), axis=1)
+
+    def cross_entropy_derivative(y_pred, y_true):
+        return y_pred - y_true
+
+    return network, cross_entropy, cross_entropy_derivative
 
 emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 X_emnist, Y_emnist = emnist.X, emnist.Y
