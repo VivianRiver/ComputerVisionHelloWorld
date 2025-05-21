@@ -31,7 +31,11 @@ class DenseLayer(Layer):
         dL_dZ = dL_dA * dA_dZ
         grad_W = dL_dZ.T @ A_prev / A_prev.shape[0]
         grad_B = np.mean(dL_dZ, axis=0, keepdims=True)
-        return dL_dZ, grad_W, grad_B
+
+        # This is the missing key
+        dL_dA_prev = dL_dZ @ self.W
+
+        return dL_dA_prev, grad_W, grad_B
 
     def update_weights_and_biases(self, learn_rate, grad_W, grad_b):
         self.W -= learn_rate * grad_W
