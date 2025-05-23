@@ -21,12 +21,11 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BrightenAugmentor.py" />
     <Compile Include="ComputerVisionHelloWorld.py" />
+    <Compile Include="ConvLayer.py" />
     <Compile Include="DenseLayer.py" />
-    <Compile Include="DropoutLayer.py" />
     <Compile Include="emnist.py" />
-    <Compile Include="EmnistAugmentor.py" />
+    <Compile Include="FlattenLayer.py" />
     <Compile Include="Layer.py" />
     <Compile Include="LetterDedications.py" />
     <Compile Include="Network.py" />

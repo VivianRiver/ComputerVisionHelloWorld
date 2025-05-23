@@ -5,9 +5,6 @@ class Network:
         self.layers = layers
         
     def train(self, X, Y, loss_function, loss_der, epoch_count, batch_size, learn_rate):
-        for layer in self.layers:
-            layer.is_training = True
-        
         X_batches, Y_batches = self.batch_samples(X, Y, batch_size)
         for epoch in range(epoch_count):
             batch_number = 0
@@ -27,8 +24,6 @@ class Network:
                 # print(f"epoch {epoch} | MSE: {np.mean(mse_loss):.10f}")  
                 loss = loss_function(oA, Y)
                 print(f"epoch {epoch} | CE: {np.mean(loss):.10f}")  
-        for layer in self.layers:
-            layer.is_training = False
         return;
 
     @staticmethod

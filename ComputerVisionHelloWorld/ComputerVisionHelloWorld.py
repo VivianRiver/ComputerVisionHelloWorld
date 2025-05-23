@@ -35,12 +35,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from DenseLayer import DenseLayer
-from DropoutLayer import DropoutLayer
+from ConvLayer import ConvLayer
+from FlattenLayer import FlattenLayer
 from Network import Network
-
 from emnist import Emnist
-from BrightenAugmentor import BrightenAugmentor
-
 from LetterDedications import letters
 import layer
 
@@ -107,48 +105,85 @@ def load_image_as_input_vector(path):
 def init_network(n_f, n_h1n, n_h2n, n_on):
     # initialize weights and biases
     # h1W holds the weights of the n_hn neurons in the first hidden layer.
-    h1Limit = np.sqrt(6 / (n_f + n_h1n))
-    h1W = np.random.randn(n_h1n, n_f) * h1Limit
-    h1B = np.zeros((1, n_h1n))
-    hLayer1 = DenseLayer(h1W, h1B, relu, relu_der)    
+    # h1Limit = np.sqrt(6 / (n_f + n_h1n))
+    # h1W = np.random.randn(n_h1n, n_f) * h1Limit
+    # h1B = np.zeros((1, n_h1n))
+    # hLayer1 = DenseLayer(h1W, h1B, relu, relu_der)    
 
-    # h2W holds the weights of the n_hn neurons in the second hidden layer.
-    h2Limit = np.sqrt(6 / (n_f + n_h2n))
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer2 = DenseLayer(h2W, h2B, relu, relu_der)
+    # # h2W holds the weights of the n_hn neurons in the second hidden layer.
+    # h2Limit = np.sqrt(6 / (n_f + n_h2n))
+    # h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    # h2B = np.zeros((1, n_h2n))
+    # hLayer2 = DenseLayer(h2W, h2B, relu, relu_der)
 
-    # dropoutLayer1 = DropoutLayer(0.05)
+    # # h3W holds the weights of the n_hn neurons in the second hidden layer.
+    # # use same parameters as layer 2
+    # h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    # h2B = np.zeros((1, n_h2n))
+    # hLayer3 = DenseLayer(h2W, h2B, tanh, tanh_der)
 
-    # h3W holds the weights of the n_hn neurons in the second hidden layer.
-    # use same parameters as layer 2
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer3 = DenseLayer(h2W, h2B, tanh, tanh_der)
-
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer4 = DenseLayer(h2W, h2B, tanh, tanh_der)
+    # h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    # h2B = np.zeros((1, n_h2n))
+    # hLayer4 = DenseLayer(h2W, h2B, tanh, tanh_der)
     
-    h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
-    h2B = np.zeros((1, n_h2n))
-    hLayer5 = DenseLayer(h2W, h2B, tanh, tanh_der)
+    # h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
+    # h2B = np.zeros((1, n_h2n))
+    # hLayer5 = DenseLayer(h2W, h2B, tanh, tanh_der)
 
-    # oW holds the weights of the n_on neuron in the output layer.    
-    oLimit = np.sqrt(6 / (n_on + n_h2n))
-    oW = np.random.randn(n_on, n_h2n) * oLimit
-    oB = np.zeros((1, n_on))
-    oLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))    
+    # # oW holds the weights of the n_on neuron in the output layer.    
+    # oLimit = np.sqrt(6 / (n_on + n_h2n))
+    # oW = np.random.randn(n_on, n_h2n) * oLimit
+    # oB = np.zeros((1, n_on))
+    # oLayer = DenseLayer(oW, oB, softmax, mse_der)
 
+    # layers = [hLayer1, hLayer2, hLayer3, hLayer4, hLayer5, oLayer]
+    # network = Network(layers)
+
+    image_height = 28
+    image_width = 28
+    in_channels = 1    
+    n_classes = n_on
+
+    # === First ConvLayer: 16 filters, 3x3 ===
+    conv1_filters = 16
+    conv1_kernel = 5
+    conv1W = np.random.randn(conv1_filters, conv1_kernel, conv1_kernel, in_channels) * np.sqrt(2 / (conv1_kernel ** 2 * in_channels))
+    conv1B = np.zeros((conv1_filters,))
+    conv1Layer = ConvLayer(conv1W, conv1B, relu, relu_der, 1)
+
+    # === Second ConvLayer: 8 filters, 3x3 ===
+    conv2_filters = 8
+    conv2_kernel = 3
+    conv2W = np.random.randn(conv2_filters, conv2_kernel, conv2_kernel, conv1_filters) * np.sqrt(2 / (conv2_kernel ** 2 * conv1_filters))
+    conv2B = np.zeros((conv2_filters,))
+    conv2Layer = ConvLayer(conv2W, conv2B, relu, relu_der, 2)
+
+    # === Flatten Layer ===
+    # After two 3x3 convolutions with stride 1 and no padding:
+    # 28 → 26 → 24
+    # flattened_size = 24 * 24 * conv2_filters
+    flattened_size = 968 #1152 #11 * 11 * 8
+    flattenLayer = FlattenLayer()    
+
+    # === Dense Hidden Layer ===
+    n_hidden = 64
+    hW = np.random.randn(n_hidden, flattened_size) * np.sqrt(6 / (flattened_size + n_hidden))
+    hB = np.zeros((1, n_hidden))
+    hiddenLayer = DenseLayer(hW, hB, tanh, tanh_der)
+
+    # === Output Layer ===
+    oW = np.random.randn(n_classes, n_hidden) * np.sqrt(6 / (n_hidden + n_classes))
+    oB = np.zeros((1, n_classes))
+    outputLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))
+
+    # === Build Network ===
     layers = [
-        hLayer1,
-        hLayer2,
-        # dropoutLayer1,
-        hLayer3,
-        hLayer4,
-        hLayer5,
-        oLayer]
-
+        conv1Layer,
+        conv2Layer,
+        flattenLayer,
+        hiddenLayer,
+        outputLayer
+    ]
     network = Network(layers)
 
     # === Loss Functions ===
@@ -162,9 +197,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
 
     return network, cross_entropy, cross_entropy_derivative
 
-emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", augment=True)
-
-
+emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz")
 X_emnist, Y_emnist = emnist.X, emnist.Y
 
 n_f = 784
@@ -178,7 +211,7 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 100
+epoch_count = 60
 batch_size = 64
 learn_rate = 0.05
 
