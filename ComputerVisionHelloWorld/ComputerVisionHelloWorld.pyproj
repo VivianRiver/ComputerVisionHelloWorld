@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="ComputerVisionHelloWorld.py" />
     <Compile Include="DenseLayer.py" />
+    <Compile Include="DropoutLayer.py" />
     <Compile Include="emnist.py" />
     <Compile Include="Layer.py" />
     <Compile Include="LetterDedications.py" />

@@ -35,6 +35,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from DenseLayer import DenseLayer
+from DropoutLayer import DropoutLayer
 from Network import Network
 from emnist import Emnist
 from LetterDedications import letters
@@ -114,6 +115,8 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     h2B = np.zeros((1, n_h2n))
     hLayer2 = DenseLayer(h2W, h2B, relu, relu_der)
 
+    dropoutLayer1 = DropoutLayer(0.05)
+
     # h3W holds the weights of the n_hn neurons in the second hidden layer.
     # use same parameters as layer 2
     h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
@@ -134,7 +137,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     oB = np.zeros((1, n_on))
     oLayer = DenseLayer(oW, oB, softmax, lambda Z: np.ones_like(Z))    
 
-    layers = [hLayer1, hLayer2, hLayer3, hLayer4, hLayer5, oLayer]
+    layers = [hLayer1, hLayer2, dropoutLayer1, hLayer3, hLayer4, hLayer5, oLayer]
     network = Network(layers)
 
     # === Loss Functions ===
@@ -162,7 +165,7 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 200
+epoch_count = 2000
 batch_size = 64
 learn_rate = 0.05
 
