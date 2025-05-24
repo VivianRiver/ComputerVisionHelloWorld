@@ -43,4 +43,11 @@ letters = ['a', 'b', 'c', 'd',
 # because my respiratory illness also takes a toll upon me.
     'i', 'j',
 
+# As I train my neural network to recognize 'l' and 'l', I acknowledge that I have been operating on a legacy belief:
+# 4) **If I don't watch myself diligently, I will become monstrous.**
+# In writing this, I must not forget that I was seen as monstrous by someone who needed a moster for their story.
+# While I am not monstrous, my way of being sometimes asks more labor of me in social space—and I deserve kindness, not shame, for that work.
+# Making me a monster in their mind made me a more suitable thing for use as an object of contempt and resentment.
+    'k', 'l',
+
            'o', 'x']
