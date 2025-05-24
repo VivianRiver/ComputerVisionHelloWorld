@@ -1,8 +1,9 @@
 import numpy as np
 import gzip
+from BrightenAugmentor import BrightenAugmentor
 
 class Emnist:
-    def __init__(self, letters, images_path, labels_path, max_samples=None):        
+    def __init__(self, letters, images_path, labels_path, augment = False, max_samples=None):        
         # Load labels
         with gzip.open(labels_path, 'rb') as lbpath:
             _ = int.from_bytes(lbpath.read(4), 'big')  # magic number
@@ -18,10 +19,19 @@ class Emnist:
             images = np.frombuffer(imgpath.read(), dtype=np.uint8).reshape(num_images, rows, cols)
 
         # Normalize images to [0, 1]
-        images = images.astype(np.float32) / 255.0
+        # images = images.astype(np.float32) / 255.0
         
         #letters = ['o', 'x']
-        letter_count = len(letters)
+        letter_count = len(letters)                
+
+        # TODO: Create Image loader class to encapsulate loading and augmenting" images
+        augmentors = []
+        
+        if (augment):
+            darkeners = [BrightenAugmentor(0, i) for i in range(-5, 0)]
+            brighteners = [BrightenAugmentor(0, i) for i in range(0, 5)]
+            augmentors = darkeners + brighteners
+            #augmentors = [BrightenAugmentor(0, 3)]
 
         combined_images = []
         combined_labels = []
@@ -30,14 +40,24 @@ class Emnist:
             l = letters[i]
             alpha_position = ord(l) - ord('a') + 1
             mask = labels == alpha_position
-            letter_images = images[mask]
+            
+            # Here, we get the images of the particular letter from EMNIST.
+            original_letter_images = images[mask]
+            # Now, we "augment" the images by making slight modifications to each one and adding the modified images.            
+            augmented_letter_images = np.array([augmentor.augment(image) for augmentor in augmentors for image in original_letter_images])            
+            # letter_labels = np.tile(one_hot, (letter_images.shape[0], 1))  
+                      
+            letter_images = np.concatenate([original_letter_images, augmented_letter_images], axis=0) if augment else original_letter_images
+            # combined_labels.append(letter_labels)            
             one_hot = self.one_hot(letter_count, i)
-            letter_labels = np.tile(one_hot, (letter_images.shape[0], 1))
+            letter_labels = np.tile(one_hot, (len(letter_images), 1))
+
             combined_images.append(letter_images)
             combined_labels.append(letter_labels)
-            print(f"{l}: position in alphabet: {alpha_position}, {len(letter_images)} images")
+            print(f"{l}: position in alphabet: {alpha_position}, {len(original_letter_images)} EMNIST images, with augmentation: {len(letter_images)} images")
 
         combined_images = np.concatenate(combined_images)
+        combined_images = combined_images.astype(np.float32) / 255.0
         combined_labels = np.concatenate(combined_labels)
 
         if max_samples:
