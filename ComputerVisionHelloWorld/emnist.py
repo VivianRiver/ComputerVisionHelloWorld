@@ -33,8 +33,8 @@ class Emnist:
             #brighteners = [BrightenAugmentor(0, i) for i in range(0, 5)]
             #augmentors = darkeners + brighteners            
             #augmentors = [BrightenAugmentor(0, 3)]
-            rotators = [RotateAugmentor(0, i) for i in range(-9, 10, 2)]
-            augmentors = rotators
+            rotators = [RotateAugmentor(0, i) for i in range(-9, 15, 4)]
+            augmentors = rotators            
 
         combined_images = []
         combined_labels = []
