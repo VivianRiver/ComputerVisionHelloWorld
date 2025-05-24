@@ -1,6 +1,7 @@
 import numpy as np
 import gzip
 from BrightenAugmentor import BrightenAugmentor
+from RotationAugmentor import RotateAugmentor
 
 class Emnist:
     def __init__(self, letters, images_path, labels_path, augment = False, max_samples=None):        
@@ -28,10 +29,12 @@ class Emnist:
         augmentors = []
         
         if (augment):
-            darkeners = [BrightenAugmentor(0, i) for i in range(-5, 0)]
-            brighteners = [BrightenAugmentor(0, i) for i in range(0, 5)]
-            augmentors = darkeners + brighteners
+            #darkeners = [BrightenAugmentor(0, i) for i in range(-5, 0)]
+            #brighteners = [BrightenAugmentor(0, i) for i in range(0, 5)]
+            #augmentors = darkeners + brighteners            
             #augmentors = [BrightenAugmentor(0, 3)]
+            rotators = [RotateAugmentor(0, i) for i in range(-9, 10, 2)]
+            augmentors = rotators
 
         combined_images = []
         combined_labels = []
