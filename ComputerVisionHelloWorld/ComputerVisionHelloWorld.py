@@ -29,6 +29,26 @@
 # Match Rate = 91%
 # Interestingly, not only does it level out here, but if training continues, it fails catastrophically at about epoch 800 and match rate drops to 0.
 
+# Training on letters A, B, C, D, E, F, G, H, I, J, K, L, O, X
+# With 5 hidden layers, 200 epochs
+# CE = 0.1685344727
+# Match Rate = 87.5%
+
+# Training on letters A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, X
+# With 5 hidden layers, 200 epochs
+# CE = 0.2050403917
+# Match Rate = 86.7%
+
+# Training on letters A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, X
+# With 5 hidden layers, 40 epochs
+# CE = 0.2607291410
+# Match Rate = 86.6%
+
+# Training on letters A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, X
+# With 5 hidden layers, 10 epochs
+# CE = 0.3425823625
+# Match Rate = 85.3%
+
 from turtle import backward
 from PIL import Image, ImageOps
 import numpy as np
@@ -178,7 +198,7 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 20
+epoch_count = 10
 batch_size = 64
 learn_rate = 0.05
 
@@ -211,6 +231,7 @@ for x, y in zip(X_test, Y_test):
 print(f"Match: {match_count}")
 print(f"Mismatch: {mismatch_count}")
 print(f"Total: {total_count}")
+print(f"Match Rate {match_count * 100.0 / total_count:.4f}%")
 
 fig, axes = plt.subplots(16, 16, figsize=(10, 10))
 axes = axes.flatten()
