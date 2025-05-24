@@ -178,7 +178,7 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 41
+epoch_count = 20
 batch_size = 64
 learn_rate = 0.05
 
