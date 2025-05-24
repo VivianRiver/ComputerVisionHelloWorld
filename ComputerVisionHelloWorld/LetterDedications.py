@@ -43,11 +43,20 @@ letters = ['a', 'b', 'c', 'd',
 # because my respiratory illness also takes a toll upon me.
     'i', 'j',
 
-# As I train my neural network to recognize 'l' and 'l', I acknowledge that I have been operating on a legacy belief:
+# As I train my neural network to recognize 'k' and 'l', I acknowledge that I have been operating on a legacy belief:
 # 4) **If I don't watch myself diligently, I will become monstrous.**
 # In writing this, I must not forget that I was seen as monstrous by someone who needed a moster for their story.
 # While I am not monstrous, my way of being sometimes asks more labor of me in social space—and I deserve kindness, not shame, for that work.
 # Making me a monster in their mind made me a more suitable thing for use as an object of contempt and resentment.
     'k', 'l',
+
+# As I train my neural network to recognize 'm' and 'n', I acknowledge that I have been operating on a legacy belief:
+# 5) **If I trust my body, I will suffer**.
+# I have suffered from a chronic illness for decades before properly treating it and as a result, I have become accusted to pushing thru
+# all manner of stress and chaos and denying my body rest.  As a result, my body is rather burnt out and I now choose to honor my
+# body's signal to rest because I now have the ability to rest better and I will need my body to be ready to put this new talent to
+# use as I practice working with neural networks.
+    'm', 'n',
+
 
            'o', 'x']
