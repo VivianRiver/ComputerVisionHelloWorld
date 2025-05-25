@@ -37,6 +37,12 @@ class DenseLayer(Layer):
 
         return dL_dA_prev, grad_W, grad_B
 
+    def _backward_input_optimization_core(self, dL_dA, Z, A_prev):
+        dA_dZ = self.activation_der(Z)
+        dL_dZ = dL_dA * dA_dZ
+        dL_dX = dL_dZ @ self.W  # Gradient w.r.t. the input of this layer
+        return dL_dX
+
     def update_weights_and_biases(self, learn_rate, grad_W, grad_b):
         self.W -= learn_rate * grad_W
         self.b -= learn_rate * grad_b
