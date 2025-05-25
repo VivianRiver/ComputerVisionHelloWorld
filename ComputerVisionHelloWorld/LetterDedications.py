@@ -13,12 +13,14 @@ letters = ['a', 'b', 'c', 'd',
 
 # As I train my neural network to recognize 'e' and 'f', I acknowledge that I have been operating on a legacy belief:
 # 1) **I must hold myself responsible for the pain of others** - I must carry the pain of those I love, even if it breaks me.
+# (The crown of inherited suffering.)
 # This is dysfunctional because holding myself responsible for other people's pain drives me to try to control things
 # that I can't control, and it gives me very poor boundaries, and makes it unpleasant to be cared for by me.
     'e', 'f',
 
 # As I train my neural network to recognize 'g' and 'h', I acknowledge that I have been operating on a legacy belief:
 # 2) **Love is proven through suffering.**
+# (Rest feels undeserved unless preceded by pain.)
 # This menas that rest is undeserved unless preceded by pain and that I am unworthy of love from the mom and dad
 # who raised me because they suffered for me and because of me.
 # In particular, my dad was a workaholic who wore it as a badge of honor and proof of how much he loved me
@@ -29,6 +31,7 @@ letters = ['a', 'b', 'c', 'd',
 
 # As I train my neural network to recognize 'i' and 'j', I acknowledge that I have been operating on a legacy belief:
 # 3) **Falling short of achieving a goal is a shameful moral failure and proof of laziness and incompetence on my part.**
+# (The internalized whip of perfectionism.)
 # Growing up, I was told that I had amazing academic talent and was capable of being a straight-A student every quarter,
 # not just every now and then.
 # I was punished and told that I wasn't achieving as I was "capable" of.
@@ -45,6 +48,7 @@ letters = ['a', 'b', 'c', 'd',
 
 # As I train my neural network to recognize 'k' and 'l', I acknowledge that I have been operating on a legacy belief:
 # 4) **If I don't watch myself diligently, I will become monstrous.**
+# (False freedom structure.)
 # In writing this, I must not forget that I was seen as monstrous by someone who needed a moster for their story.
 # While I am not monstrous, my way of being sometimes asks more labor of me in social space—and I deserve kindness, not shame, for that work.
 # Making me a monster in their mind made me a more suitable thing for use as an object of contempt and resentment.
@@ -52,11 +56,29 @@ letters = ['a', 'b', 'c', 'd',
 
 # As I train my neural network to recognize 'm' and 'n', I acknowledge that I have been operating on a legacy belief:
 # 5) **If I trust my body, I will suffer**.
+# (The exile of embodiment.)
 # I have suffered from a chronic illness for decades before properly treating it and as a result, I have become accusted to pushing thru
 # all manner of stress and chaos and denying my body rest.  As a result, my body is rather burnt out and I now choose to honor my
 # body's signal to rest because I now have the ability to rest better and I will need my body to be ready to put this new talent to
 # use as I practice working with neural networks.
+# Unlike some of the other "legacy beliefs", this one used to actually be true because I needed various interventions to heal
+# my body which I didn't have access to, but that was then and this is now.
     'm', 'n',
 
+# 'o' was part of the original six letters.
+    'o',
 
-           'o', 'x']
+# As I train my neural network to recognize 'm' and 'n', I acknowledge that I have been operating on a legacy belief:
+# 6) **If I am not doing something productive or cultivating a special experience, I am wasting my time and life.**
+# (Urgency as worth.)
+# I was taught that ordinary moments don't count.  That time must be used or justified - not inhabited.
+# Rest, stillness, and softness feel like lost opportunities or dangerous indulgence.
+# Somewhere deep down, I’ve come to believe that only urgency makes something important—that if I’m not driven by a deadline or a crisis,
+# then what I’m doing must be selfish, lazy, or meaningless.
+# So I try to optimize every moment, fearing that meaning will vanish if I stop striving for it.
+# However, I try in vain as my body has limited resources, and this time especially is a time of growth and change and healing
+# when my body needs to be able to recover from all I demand of it.
+    'p', 'q',
+
+
+           'x']
