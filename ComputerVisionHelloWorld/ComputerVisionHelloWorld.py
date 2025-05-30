@@ -211,12 +211,12 @@ Y[0] = 1
 image = X_start.reshape(28, 28)
 image = image.T  # Transpose if your model was trained on transposed EMNIST samples
 
-plt.imshow(image, cmap='gray')
-plt.axis('off')
-plt.title("Image to be Optimized: 'A'")
-plt.show()
+# plt.imshow(image, cmap='gray')
+# plt.axis('off')
+# plt.title("Image to be Optimized: 'A'")
+# plt.show()
 
-X_optimized = network.optimize_sample(X_start, Y, cross_entropy_loss, cross_entropy_derivative, 100_000, batch_size, 0.2)
+X_optimized = network.optimize_sample(X_start, Y, cross_entropy_loss, cross_entropy_derivative, 10_000, batch_size, 0.1)
 
 _, aValues = network.forward_pass(X_optimized)
 oA = aValues[-1]
@@ -274,7 +274,7 @@ plt.axis('off')
 plt.title("Dreamed Letter: 'A'")
 plt.show()
 
-print(X_optimized)
+# print(X_optimized)
 
 # for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
 #     print()
