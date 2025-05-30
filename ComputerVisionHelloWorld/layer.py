@@ -42,6 +42,13 @@ class Layer(ABC):
     def update_weights_and_biases(self, learn_rate, grad_W, grad_b):
         pass
 
+    def backward_pass_input_optimization(self, dL_dA, Z, A_prev):
+        _backward_input_optimization_core(self, dL_dA, Z, A_prev)
+
+    @abstractmethod
+    def _backward_input_optimization_core(self, dL_dA, Z, A_prev):
+        pass
+
 class ShapeLogger:
     def __init__(self):
         self.forward_shapes = []

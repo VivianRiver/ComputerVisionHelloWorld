@@ -182,7 +182,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
 
     return network, cross_entropy, cross_entropy_derivative
 
-emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", augment=True)
+emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", augment=False)
 
 
 X_emnist, Y_emnist = emnist.X, emnist.Y
@@ -203,6 +203,12 @@ batch_size = 64
 learn_rate = 0.05
 
 network.train(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
+
+X = np.random.randn(1, 784)
+Y = np.zeros(emnist.letter_count, dtype=int)
+Y[0] = 1
+
+X = network.optimize_sample(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
 
 match_count = 0
 mismatch_count = 0
@@ -245,6 +251,15 @@ for ax, (img, true_label, pred_label) in zip(axes, mismatches):
     ax.set_title(f"T: {class_names[true_label]}, P: {class_names[pred_label]}")
 
 plt.tight_layout()
+plt.show()
+
+print(X)
+image = X.reshape(28, 28)
+image = image.T  # Transpose if your model was trained on transposed EMNIST samples
+
+plt.imshow(image, cmap='gray')
+plt.axis('off')
+plt.title("Dreamed Letter: 'A'")
 plt.show()
 
 # for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
