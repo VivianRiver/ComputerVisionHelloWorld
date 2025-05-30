@@ -31,25 +31,29 @@ class Network:
             layer.is_training = False
         return;
 
-    def optimize_sample(self, X, Y, loss_function, loss_der, epoch_count, batch_size, learn_rate):
+    def optimize_sample(self, X, chosen_letter_index, loss_function, loss_der, epoch_count, batch_size, learn_rate):
         X_optimized = X.copy()
         for epoch in range(epoch_count):
             zValues, aValues = self.forward_pass(X_optimized)
             oA = aValues[-1]
             # loss_der_value = oA - Y  # predicted probabilities minus true one-hot labels        
             # grad_X = self.backward_pass_input_optimization(X_optimized, loss_der_value, zValues, aValues)
-            grad_X = self.backward_pass_input_optimization(X_optimized, zValues, aValues, target_class_index=0)  # 'A' is index 0
-
+            
+            grad_X = self.backward_pass_input_optimization(X_optimized, zValues, aValues, target_class_index=chosen_letter_index)
+            grad_magnitude = np.linalg.norm(grad_X)
+            if grad_magnitude < 1e-5:
+                grad_X = grad_X / grad_magnitude  # normalize
+                                             
             X_optimized -= learn_rate * grad_X
 
-            if epoch % 1000 == 0 or epoch == epoch_count - 1:
-                # _, aValues = self.forward_pass(X_optimized)
-                # oA = aValues[-1]                
-                # loss = loss_function(oA, Y)
-                # print(f"epoch {epoch} | CE: {np.mean(loss):.10f}")  
-                logits = zValues[-1]                
+            if epoch % 500 == 0:
+                X_optimized = np.clip(X_optimized, 0, 1)
+
+            if epoch % 1000 == 0 or epoch == epoch_count - 1:                
+                logits = zValues[-1]     
+                # should this be aValues?  
                 predicted_class = np.argmax(logits)
-                print(f"epoch {epoch} | logit for 'A': {logits[0, 0]:.6f} | predicted: {predicted_class}")
+                print(f"epoch {epoch} | logit for letter at index{chosen_letter_index}: {logits[0, 0]:.6f} | predicted: {predicted_class}")
 
         return X_optimized
 
@@ -109,20 +113,25 @@ class Network:
         last = len(self.layers) - 1
         Z = zValues[last]
         A_prev = aValues[last - 1] if last > 0 else X
-        
-        # dL_dA = self.layers[last].backward_pass_input_optimization(loss_der_value, Z, A_prev)        
-        dL_dZ = np.zeros_like(Z)
-        dL_dZ[0, target_class_index] = -1
+
+        # Step 1: compute softmax on logits
+        exps = np.exp(Z - np.max(Z, axis=1, keepdims=True))
+        softmax_output = exps / np.sum(exps, axis=1, keepdims=True)
+
+        # Step 2: create one-hot target for class A
+        Y = np.zeros_like(Z)
+        Y[0, target_class_index] = 1
+
+        # Step 3: compute derivative of cross-entropy w.r.t. logits
+        dL_dZ = softmax_output - Y
+
+        # Step 4: backprop as usual
         dL_dA = self.layers[last].backward_pass_input_optimization(dL_dZ, Z, A_prev)
 
-        # Iterate over the layers in reverse order, but skip the output layer, the last one, as we accounted for it above.
-        # for layer in layers[:-1][::-1]
-        layer_count = len(self.layers)
-        self.layers[layer_count - 1].print_all = False
-        for i in range(layer_count)[:-1][::-1]:            
-            this_layer_z_value = zValues[i]
-            prev_layer_input = aValues[i - 1] if i > 0 else X                    
-            dL_dA = self.layers[i].backward_pass_input_optimization(dL_dA, this_layer_z_value, prev_layer_input)
+        for i in range(last - 1, -1, -1):
+            Z_i = zValues[i]
+            A_prev_i = aValues[i - 1] if i > 0 else X
+            dL_dA = self.layers[i].backward_pass_input_optimization(dL_dA, Z_i, A_prev_i)
 
         return dL_dA
 

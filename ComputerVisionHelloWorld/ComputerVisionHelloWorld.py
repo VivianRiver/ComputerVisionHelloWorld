@@ -130,13 +130,13 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
     h1Limit = np.sqrt(6 / (n_f + n_h1n))
     h1W = np.random.randn(n_h1n, n_f) * h1Limit
     h1B = np.zeros((1, n_h1n))
-    hLayer1 = DenseLayer(h1W, h1B, relu, relu_der)    
+    hLayer1 = DenseLayer(h1W, h1B, tanh, tanh_der)    
 
     # h2W holds the weights of the n_hn neurons in the second hidden layer.
     h2Limit = np.sqrt(6 / (n_f + n_h2n))
     h2W = np.random.randn(n_h2n, n_h1n) * h2Limit
     h2B = np.zeros((1, n_h2n))
-    hLayer2 = DenseLayer(h2W, h2B, relu, relu_der)
+    hLayer2 = DenseLayer(h2W, h2B, tanh, tanh_der)
 
     # dropoutLayer1 = DropoutLayer(0.05)
 
@@ -164,9 +164,9 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
         hLayer1,
         hLayer2,
         # dropoutLayer1,
-        hLayer3,
-        hLayer4,
-        hLayer5,
+        #hLayer3,
+        #hLayer4,
+        #hLayer5,
         oLayer]
 
     network = Network(layers)
@@ -182,7 +182,7 @@ def init_network(n_f, n_h1n, n_h2n, n_on):
 
     return network, cross_entropy, cross_entropy_derivative
 
-emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", augment=False)
+emnist = Emnist(letters, "c:\\temp\\emnist\\emnist-letters-train-images-idx3-ubyte.gz", "c:\\temp\\emnist\\emnist-letters-train-labels-idx1-ubyte.gz", augment=True)
 
 
 X_emnist, Y_emnist = emnist.X, emnist.Y
@@ -198,15 +198,17 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 20
+epoch_count = 50
 batch_size = 64
 learn_rate = 0.05
 
 network.train(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
 
+chosen_letter_index = 14
+
 X_start = np.random.randn(1, 784)
-Y = np.zeros(emnist.letter_count, dtype=int)
-Y[0] = 1
+# Y = np.zeros(emnist.letter_count, dtype=int)
+# Y[chosen_letter_index] = 1
 
 image = X_start.reshape(28, 28)
 image = image.T  # Transpose if your model was trained on transposed EMNIST samples
@@ -216,11 +218,28 @@ image = image.T  # Transpose if your model was trained on transposed EMNIST samp
 # plt.title("Image to be Optimized: 'A'")
 # plt.show()
 
-X_optimized = network.optimize_sample(X_start, Y, cross_entropy_loss, cross_entropy_derivative, 10_000, batch_size, 0.1)
+fig, axes = plt.subplots(1, len(emnist.letters), figsize=(len(letters) * 2, 2))
+for i, letter in enumerate(emnist.letters):
+    dreamed_image = X_optimized = network.optimize_sample(X_start, i, cross_entropy_loss, cross_entropy_derivative, 10_000, batch_size, 1)    
 
-_, aValues = network.forward_pass(X_optimized)
-oA = aValues[-1]
-prediction = rounded = (oA >= 0.5).astype(int)        
+    print(f"{letter}")
+    _, aValues = network.forward_pass(X_optimized)
+    oA = aValues[-1]
+    prediction = rounded = (oA >= 0.5).astype(int)        
+
+    print(prediction)
+    print(oA)
+
+    # Normalize image for display    
+    img = dreamed_image.reshape(28, 28).T
+    img = (img - img.min()) / (img.max() - img.min()).T
+
+    # Plot it
+    axes[i].imshow(img, cmap='gray')
+    axes[i].axis('off')
+    axes[i].set_title(letter)
+plt.tight_layout()
+plt.show()
 
 match_count = 0
 mismatch_count = 0
@@ -265,14 +284,14 @@ print(f"Match Rate {match_count * 100.0 / total_count:.4f}%")
 # plt.tight_layout()
 #plt.show()
 
-print(X_start)
-image = X_optimized.reshape(28, 28)
-image = image.T  # Transpose if your model was trained on transposed EMNIST samples
+# print(X_start)
+# image = X_optimized.reshape(28, 28)
+# image = image.T  # Transpose if your model was trained on transposed EMNIST samples
 
-plt.imshow(image, cmap='gray')
-plt.axis('off')
-plt.title("Dreamed Letter: 'A'")
-plt.show()
+# plt.imshow(image, cmap='gray')
+# plt.axis('off')
+# plt.title("Dreamed Letter: 'A'")
+# plt.show()
 
 # print(X_optimized)
 
@@ -285,36 +304,36 @@ plt.show()
 
 
 
-# Reshape and transpose if needed
-start_image = X_start.reshape(28, 28).T
-output_image = X_optimized.reshape(28, 28).T
-diff_image = (X_optimized - X_start).reshape(28, 28).T
+# # Reshape and transpose if needed
+# start_image = X_start.reshape(28, 28).T
+# output_image = X_optimized.reshape(28, 28).T
+# diff_image = (X_optimized - X_start).reshape(28, 28).T
 
-# Normalize for visualization (optional but helpful)
-start_image = (start_image - start_image.min()) / (start_image.max() - start_image.min())
-output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
-diff_image = (diff_image - diff_image.min()) / (diff_image.max() - diff_image.min())
+# # Normalize for visualization (optional but helpful)
+# start_image = (start_image - start_image.min()) / (start_image.max() - start_image.min())
+# output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
+# diff_image = (diff_image - diff_image.min()) / (diff_image.max() - diff_image.min())
 
-# Plot side-by-side
-plt.figure(figsize=(12, 4))  # Wider figure for side-by-side layout
+# # Plot side-by-side
+# plt.figure(figsize=(12, 4))  # Wider figure for side-by-side layout
 
-# Plot start image
-plt.subplot(1, 3, 1)
-plt.imshow(start_image, cmap='gray')
-plt.axis('off')
-plt.title("Start (Noise)")
+# # Plot start image
+# plt.subplot(1, 3, 1)
+# plt.imshow(start_image, cmap='gray')
+# plt.axis('off')
+# plt.title("Start (Noise)")
 
-# Plot optimized image
-plt.subplot(1, 3, 2)
-plt.imshow(output_image, cmap='gray')
-plt.axis('off')
-plt.title("Optimized 'A'")
+# # Plot optimized image
+# plt.subplot(1, 3, 2)
+# plt.imshow(output_image, cmap='gray')
+# plt.axis('off')
+# plt.title("Optimized 'A'")
 
-# Plot diff image
-plt.subplot(1, 3, 3)
-plt.imshow(diff_image, cmap='gray')
-plt.axis('off')
-plt.title("diff 'A'")
+# # Plot diff image
+# plt.subplot(1, 3, 3)
+# plt.imshow(diff_image, cmap='gray')
+# plt.axis('off')
+# plt.title("diff 'A'")
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
