@@ -36,7 +36,7 @@ class DenseLayer(Layer):
         dL_dA_prev = dL_dZ @ self.W
 
         return dL_dA_prev, grad_W, grad_B
-
+        
     def _backward_input_optimization_core(self, dL_dA, Z, A_prev):
         dA_dZ = self.activation_der(Z)
         dL_dZ = dL_dA * dA_dZ

@@ -43,7 +43,7 @@ class Layer(ABC):
         pass
 
     def backward_pass_input_optimization(self, dL_dA, Z, A_prev):
-        _backward_input_optimization_core(self, dL_dA, Z, A_prev)
+        return self._backward_input_optimization_core(dL_dA, Z, A_prev)
 
     @abstractmethod
     def _backward_input_optimization_core(self, dL_dA, Z, A_prev):

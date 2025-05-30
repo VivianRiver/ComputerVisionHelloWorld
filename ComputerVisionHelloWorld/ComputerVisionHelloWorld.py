@@ -198,17 +198,29 @@ X = X_emnist[indices]
 Y = Y_emnist[indices]
 
 network, loss_func, loss_der = init_network(n_f, n_h1n, n_h2n, n_on)
-epoch_count = 10
+epoch_count = 20
 batch_size = 64
 learn_rate = 0.05
 
 network.train(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
 
-X = np.random.randn(1, 784)
+X_start = np.random.randn(1, 784)
 Y = np.zeros(emnist.letter_count, dtype=int)
 Y[0] = 1
 
-X = network.optimize_sample(X, Y, cross_entropy_loss, cross_entropy_derivative, epoch_count, batch_size, learn_rate)
+image = X_start.reshape(28, 28)
+image = image.T  # Transpose if your model was trained on transposed EMNIST samples
+
+plt.imshow(image, cmap='gray')
+plt.axis('off')
+plt.title("Image to be Optimized: 'A'")
+plt.show()
+
+X_optimized = network.optimize_sample(X_start, Y, cross_entropy_loss, cross_entropy_derivative, 100_000, batch_size, 0.2)
+
+_, aValues = network.forward_pass(X_optimized)
+oA = aValues[-1]
+prediction = rounded = (oA >= 0.5).astype(int)        
 
 match_count = 0
 mismatch_count = 0
@@ -239,22 +251,22 @@ print(f"Mismatch: {mismatch_count}")
 print(f"Total: {total_count}")
 print(f"Match Rate {match_count * 100.0 / total_count:.4f}%")
 
-fig, axes = plt.subplots(16, 16, figsize=(10, 10))
-axes = axes.flatten()
+# fig, axes = plt.subplots(16, 16, figsize=(10, 10))
+# axes = axes.flatten()
 
-class_names = emnist.letters  # Adjust for your classes
+# class_names = emnist.letters  # Adjust for your classes
 
-for ax, (img, true_label, pred_label) in zip(axes, mismatches):
-    img_corrected = img.reshape(28, 28).T  # ← just this
-    ax.imshow(img_corrected, cmap='gray')
-    ax.axis('off')
-    ax.set_title(f"T: {class_names[true_label]}, P: {class_names[pred_label]}")
+# for ax, (img, true_label, pred_label) in zip(axes, mismatches):
+#     img_corrected = img.reshape(28, 28).T  # ← just this
+#     ax.imshow(img_corrected, cmap='gray')
+#     ax.axis('off')
+#     ax.set_title(f"T: {class_names[true_label]}, P: {class_names[pred_label]}")
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+#plt.show()
 
-print(X)
-image = X.reshape(28, 28)
+print(X_start)
+image = X_optimized.reshape(28, 28)
 image = image.T  # Transpose if your model was trained on transposed EMNIST samples
 
 plt.imshow(image, cmap='gray')
@@ -262,8 +274,47 @@ plt.axis('off')
 plt.title("Dreamed Letter: 'A'")
 plt.show()
 
+print(X_optimized)
+
 # for x in ["x", "o", "x1", "o1", "x2", "o2", "x3", "o3", "x4", "o4", "a1", "b1"]:
 #     print()
 #     print(x)
 #     input_vector = load_image_as_input_vector(f"c:\\temp\\{x}.bmp")
 #     check_result(input_vector, "X")
+
+
+
+
+# Reshape and transpose if needed
+start_image = X_start.reshape(28, 28).T
+output_image = X_optimized.reshape(28, 28).T
+diff_image = (X_optimized - X_start).reshape(28, 28).T
+
+# Normalize for visualization (optional but helpful)
+start_image = (start_image - start_image.min()) / (start_image.max() - start_image.min())
+output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
+diff_image = (diff_image - diff_image.min()) / (diff_image.max() - diff_image.min())
+
+# Plot side-by-side
+plt.figure(figsize=(12, 4))  # Wider figure for side-by-side layout
+
+# Plot start image
+plt.subplot(1, 3, 1)
+plt.imshow(start_image, cmap='gray')
+plt.axis('off')
+plt.title("Start (Noise)")
+
+# Plot optimized image
+plt.subplot(1, 3, 2)
+plt.imshow(output_image, cmap='gray')
+plt.axis('off')
+plt.title("Optimized 'A'")
+
+# Plot diff image
+plt.subplot(1, 3, 3)
+plt.imshow(diff_image, cmap='gray')
+plt.axis('off')
+plt.title("diff 'A'")
+
+plt.tight_layout()
+plt.show()

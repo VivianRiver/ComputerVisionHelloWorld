@@ -32,14 +32,15 @@ class Network:
         return;
 
     def optimize_sample(self, X, Y, loss_function, loss_der, epoch_count, batch_size, learn_rate):
+        X_optimized = X.copy()
         for epoch in range(epoch_count):
-            zValues, aValues = self.forward_pass(X_batch)
+            zValues, aValues = self.forward_pass(X_optimized)
             oA = aValues[-1]
-            loss_der_value = oA - Y_batch  # predicted probabilities minus true one-hot labels        
-            grad_X = self.backward_pass_input_optimization(X_batch, loss_der_value, zValues, aValues)
-            X -= learn_rate * grad_X
+            loss_der_value = oA - Y  # predicted probabilities minus true one-hot labels        
+            grad_X = self.backward_pass_input_optimization(X_optimized, loss_der_value, zValues, aValues)
+            X_optimized += learn_rate * grad_X
 
-        return X
+        return X_optimized
 
     @staticmethod
     def batch_samples(X, Y, batch_size):
@@ -97,7 +98,7 @@ class Network:
         last = len(self.layers) - 1
         Z = zValues[last]
         A_prev = aValues[last - 1] if last > 0 else X
-        dL_dA = self.layers[last].backward_pass(loss_der_value, Z, A_prev)        
+        dL_dA = self.layers[last].backward_pass_input_optimization(loss_der_value, Z, A_prev)        
 
         # Iterate over the layers in reverse order, but skip the output layer, the last one, as we accounted for it above.
         # for layer in layers[:-1][::-1]
@@ -106,7 +107,7 @@ class Network:
         for i in range(layer_count)[:-1][::-1]:            
             this_layer_z_value = zValues[i]
             prev_layer_input = aValues[i - 1] if i > 0 else X                    
-            dL_dA = self.layers[i].backward_pass(dL_dA, this_layer_z_value, prev_layer_input)
+            dL_dA = self.layers[i].backward_pass_input_optimization(dL_dA, this_layer_z_value, prev_layer_input)
 
         return dL_dA
 
