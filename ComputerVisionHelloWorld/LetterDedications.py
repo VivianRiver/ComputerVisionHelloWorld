@@ -80,5 +80,25 @@ letters = ['a', 'b', 'c', 'd',
 # when my body needs to be able to recover from all I demand of it.
     'p', 'q',
 
+# As I train my neural network to recognize 'r' and 's', I acknowledge that I have been operating on a legacy belief:
+# 7) **My value is measured by how much I can endure.**
+# (The valorization of suffering)
+# This relates to my legacy belief above, "If I trust the body, I will suffer."  Because I suffered for many years from medical gaslighting
+# and narratives that value is determined exclusively by what one can provide, I forced myself to suffer by pushing thru pain and illness
+# because it felt like it was the only way I could survive, and furthermoe, growing up, I saw my father model this, and he valorized his
+# own perceived suffering, casting himself as a hero for working all hours and tolerating everything about me that he said was wrong with me.
+    'r', 's',
+
+# As I train my neural network to recognize 't' and 'u', I acknowledge that I have been operating on a legacy belief:
+# 8) **If I ask for what I need, I will lose everything.**
+# (The silence of survivival)
+# When I first tried to understand this, I found it nonsensical until I understood the paradox.
+# There were a lot of things that I asked for growing up that I was told were unreasonable and even dangerous.  I was told that I asked for
+# far more than was reasonable and that I had been provided so much that my heart should burst with gratitude for what I had and that most any
+# other child would be envious of how good I have it.
+# The paradox is that there were and continue to be things in my heart that I want that harrow me to even imagine myself asking for.
+# Usually, these desires pertain to connection and intamacy, rather than things that are bought with money.
+    't', 'u',
+
 
            'x']
